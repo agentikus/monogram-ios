@@ -66,7 +66,6 @@ void ASLayoutElementPopContext()
   ASDisplayNodeCAssertNotNil(tls_context, @"Attempt to pop context when there wasn't a context!");
   CFRelease((__bridge CFTypeRef)tls_context);
   tls_context = nil;
-#endif
 }
 
 #else

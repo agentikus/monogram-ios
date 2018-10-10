@@ -257,7 +257,7 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
     if (_displayWithoutProcessing && ASDisplayNodeThreadIsMain()) {
       BOOL stretchable = !UIEdgeInsetsEqualToEdgeInsets(image.capInsets, UIEdgeInsetsZero);
       if (stretchable) {
-        ASDisplayNodeSetupLayerContentsWithResizableImage(self.layer, image);
+        ASDisplayNodeSetResizableContents(self, image);
       } else {
         self.contents = (id)image.CGImage;
       }
