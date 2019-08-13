@@ -9,7 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 
-class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
+final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private let previewTheme: PresentationTheme
     private var presentationData: PresentationData
