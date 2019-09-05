@@ -30,7 +30,7 @@
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)org.telegram.Telegram-iOS</string>
+		<string>X834Q8SBVP.org.telegram.Telegram-iOS</string>
 	</array>
 </dict>
 </plist>
