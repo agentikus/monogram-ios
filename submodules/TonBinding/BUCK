@@ -4,13 +4,17 @@ static_library(
     name = "TonBinding",
     srcs = glob([
         "Sources/**/*.m",
+        "Sources/**/*.mm",
     ]),
-    headers = merge_maps([
+    headers = glob([
+        "Sources/**/*.h",
+    ]),
+    exported_headers = glob([
         "Sources/**/*.h",
     ]),
     visibility = ["PUBLIC"],
     deps = [
-        "//submodules/SSignalKit/SignalKit:SSignalKit",
+        "//submodules/SSignalKit/SSignalKit:SSignalKit",
         "//submodules/openssl:openssl",
         "//submodules/ton:ton",
     ],
