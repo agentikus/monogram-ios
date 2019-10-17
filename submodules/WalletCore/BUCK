@@ -6,8 +6,8 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/MtProtoKit:MtProtoKit#shared",
-	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+	    "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/TonBinding:TonBinding",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
