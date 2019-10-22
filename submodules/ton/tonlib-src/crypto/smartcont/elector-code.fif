@@ -354,104 +354,105 @@ PROGRAM{
   }>
   unfreeze_without_bonuses PROC:<{
     //  credits freeze_dict tot_stakes
-    0 PUSHINT	//  credits freeze_dict tot_stakes recovered=0
-    DUP	//  credits freeze_dict tot_stakes recovered=0 total=0
-    -1 PUSHINT	//  credits freeze_dict tot_stakes recovered=0 total=0 pubkey=-1
+    0 PUSHINT	//  credits freeze_dict tot_stakes _5=0
+    DUP	//  credits freeze_dict tot_stakes total=0 recovered=0
+    -1 PUSHINT	//  credits freeze_dict tot_stakes total=0 recovered=0 pubkey=-1
     UNTIL:<{
       s4 PUSH
-      8 PUSHPOW2	//  credits freeze_dict tot_stakes recovered total pubkey freeze_dict _10=256
+      8 PUSHPOW2	//  credits freeze_dict tot_stakes total recovered pubkey freeze_dict _10=256
       DICTUGETNEXT
       NULLSWAPIFNOT
-      NULLSWAPIFNOT	//  credits freeze_dict tot_stakes recovered total cs pubkey f
-      DUP	//  credits freeze_dict tot_stakes recovered total cs pubkey f f
-      IF:<{	//  credits freeze_dict tot_stakes recovered total cs pubkey f
-        s0 s2 XCHG	//  credits freeze_dict tot_stakes recovered total f pubkey cs
-        256 LDU	//  credits freeze_dict tot_stakes recovered total f pubkey _16 cs
-        64 LDU	//  credits freeze_dict tot_stakes recovered total f pubkey _16 _42 _41
-        NIP	//  credits freeze_dict tot_stakes recovered total f pubkey _16 cs
-        LDGRAMS	//  credits freeze_dict tot_stakes recovered total f pubkey _16 _22 cs
-        1 LDI	//  credits freeze_dict tot_stakes recovered total f pubkey addr stake banned cs
+      NULLSWAPIFNOT	//  credits freeze_dict tot_stakes total recovered cs pubkey f
+      DUP	//  credits freeze_dict tot_stakes total recovered cs pubkey f f
+      IF:<{	//  credits freeze_dict tot_stakes total recovered cs pubkey f
+        s0 s2 XCHG	//  credits freeze_dict tot_stakes total recovered f pubkey cs
+        256 LDU	//  credits freeze_dict tot_stakes total recovered f pubkey _16 cs
+        64 LDU	//  credits freeze_dict tot_stakes total recovered f pubkey _16 _42 _41
+        NIP	//  credits freeze_dict tot_stakes total recovered f pubkey _16 cs
+        LDGRAMS	//  credits freeze_dict tot_stakes total recovered f pubkey _16 _22 cs
+        1 LDI	//  credits freeze_dict tot_stakes total recovered f pubkey addr stake banned cs
         ENDS
-        IF:<{	//  credits freeze_dict tot_stakes recovered total f pubkey addr stake
-          NIP	//  credits freeze_dict tot_stakes recovered total f pubkey stake
-          s4 s4 XCPU	//  credits freeze_dict tot_stakes stake total f pubkey recovered stake
-          ADD	//  credits freeze_dict tot_stakes stake total f pubkey recovered
-        }>ELSE<{	//  credits freeze_dict tot_stakes recovered total f pubkey addr stake
-          s8 s8 s8 XC2PU	//  stake freeze_dict tot_stakes recovered total f pubkey credits addr stake
-          ~credit_to CALLDICT	//  stake freeze_dict tot_stakes recovered total f pubkey credits
+        IF:<{	//  credits freeze_dict tot_stakes total recovered f pubkey addr stake
+          NIP	//  credits freeze_dict tot_stakes total recovered f pubkey stake
+          s3 s3 XCPU	//  credits freeze_dict tot_stakes total stake f pubkey recovered stake
+          ADD	//  credits freeze_dict tot_stakes total stake f pubkey recovered
+        }>ELSE<{	//  credits freeze_dict tot_stakes total recovered f pubkey addr stake
+          s8 s8 s8 XC2PU	//  stake freeze_dict tot_stakes total recovered f pubkey credits addr stake
+          ~credit_to CALLDICT	//  stake freeze_dict tot_stakes total recovered f pubkey credits
           s0 s7 XCHG
-          s0 s4 XCHG	//  credits freeze_dict tot_stakes stake total f pubkey recovered
+          s0 s3 XCHG	//  credits freeze_dict tot_stakes total stake f pubkey recovered
         }>
-        s3 s4 XCHG2	//  credits freeze_dict tot_stakes recovered pubkey f total stake
-        ADD	//  credits freeze_dict tot_stakes recovered pubkey f total
+        s4 s3 XCHG2	//  credits freeze_dict tot_stakes pubkey recovered f total stake
+        ADD	//  credits freeze_dict tot_stakes pubkey recovered f total
       }>ELSE<{
-        2SWAP
-        DROP	//  credits freeze_dict tot_stakes recovered pubkey f total
+        s4 s2 XCHG2
+        DROP	//  credits freeze_dict tot_stakes pubkey recovered f total
       }>
-      SWAP	//  credits freeze_dict tot_stakes recovered pubkey total f
-      NOT	//  credits freeze_dict tot_stakes recovered pubkey total _32
-      s1 s2 XCHG	//  credits freeze_dict tot_stakes recovered total pubkey _32
-    }>	//  credits freeze_dict tot_stakes recovered total pubkey
+      SWAP	//  credits freeze_dict tot_stakes pubkey recovered total f
+      NOT	//  credits freeze_dict tot_stakes pubkey recovered total _32
+      s1 s3 XCHG	//  credits freeze_dict tot_stakes total recovered pubkey _32
+    }>	//  credits freeze_dict tot_stakes total recovered pubkey
     DROP
-    s3 POP	//  credits total tot_stakes recovered
-    -ROT	//  credits recovered total tot_stakes
+    s3 POP	//  credits recovered tot_stakes total
+    SWAP	//  credits recovered total tot_stakes
     EQUAL	//  credits recovered _34
     59 THROWIFNOT
   }>
   unfreeze_with_bonuses PROC:<{
     //  credits freeze_dict tot_stakes tot_bonuses
-    0 PUSHINT	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses=0
-    s0 s0 PUSH2	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses=0 recovered=0 total=0
-    -1 PUSHINT	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses=0 recovered=0 total=0 pubkey=-1
+    0 PUSHINT	//  credits freeze_dict tot_stakes tot_bonuses _7=0
+    s0 s0 PUSH2	//  credits freeze_dict tot_stakes tot_bonuses total=0 returned_bonuses=0 recovered=0
+    -1 PUSHINT	//  credits freeze_dict tot_stakes tot_bonuses total=0 returned_bonuses=0 recovered=0 pubkey=-1
     UNTIL:<{
       s6 PUSH
-      8 PUSHPOW2	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total pubkey freeze_dict _12=256
+      8 PUSHPOW2	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered pubkey freeze_dict _12=256
       DICTUGETNEXT
       NULLSWAPIFNOT
-      NULLSWAPIFNOT	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total cs pubkey f
-      DUP	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total cs pubkey f f
-      IF:<{	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total cs pubkey f
-        s0 s2 XCHG	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey cs
-        256 LDU	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey _18 cs
-        64 LDU	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey _18 _52 _51
-        NIP	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey _18 cs
-        LDGRAMS	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey _18 _24 cs
-        1 LDI	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey addr stake banned cs
+      NULLSWAPIFNOT	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered cs pubkey f
+      DUP	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered cs pubkey f f
+      IF:<{	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered cs pubkey f
+        s0 s2 XCHG	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey cs
+        256 LDU	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey _18 cs
+        64 LDU	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey _18 _52 _51
+        NIP	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey _18 cs
+        LDGRAMS	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey _18 _24 cs
+        1 LDI	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake banned cs
         ENDS
-        IF:<{	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey addr stake
-          NIP	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey stake
-          s4 s4 XCPU	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses stake total f pubkey recovered stake
-          ADD	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses stake total f pubkey recovered
-        }>ELSE<{	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey addr stake
-          s7 s0 s8 PUSH3	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey addr stake tot_bonuses stake tot_stakes
-          MULDIV	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey addr stake bonus
-          s7 s7 XCPU	//  credits freeze_dict tot_stakes tot_bonuses bonus recovered total f pubkey addr stake returned_bonuses bonus
-          ADD	//  credits freeze_dict tot_stakes tot_bonuses bonus recovered total f pubkey addr stake returned_bonuses
-          s1 s7 PUXC	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey addr stake stake bonus
-          ADD	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey addr stake _35
-          s11 s11 s0 XCHG3	//  stake freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey credits addr _35
-          ~credit_to CALLDICT	//  stake freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total f pubkey credits
+        IF:<{	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake
+          NIP	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey stake
+          s3 s3 XCPU	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses stake f pubkey recovered stake
+          ADD	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses stake f pubkey recovered
+        }>ELSE<{	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake
+          s7 s0 s8 PUSH3	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake tot_bonuses stake tot_stakes
+          MULDIV	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake bonus
+          s6 s6 XCPU	//  credits freeze_dict tot_stakes tot_bonuses total bonus recovered f pubkey addr stake returned_bonuses bonus
+          ADD	//  credits freeze_dict tot_stakes tot_bonuses total bonus recovered f pubkey addr stake returned_bonuses
+          s1 s6 PUXC	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake stake bonus
+          ADD	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey addr stake _35
+          s11 s11 s0 XCHG3	//  stake freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey credits addr _35
+          ~credit_to CALLDICT	//  stake freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered f pubkey credits
           s0 s9 XCHG
-          s0 s4 XCHG	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses stake total f pubkey recovered
+          s0 s3 XCHG	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses stake f pubkey recovered
         }>
-        s3 s4 XCHG2	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered pubkey f total stake
-        ADD	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered pubkey f total
+        s5 s3 XCHG2	//  credits freeze_dict tot_stakes tot_bonuses pubkey returned_bonuses recovered f total stake
+        ADD	//  credits freeze_dict tot_stakes tot_bonuses pubkey returned_bonuses recovered f total
       }>ELSE<{
-        2SWAP
-        DROP	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered pubkey f total
+        s5 s2 XCHG2
+        DROP	//  credits freeze_dict tot_stakes tot_bonuses pubkey returned_bonuses recovered f total
       }>
-      SWAP	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered pubkey total f
-      NOT	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered pubkey total _38
-      s1 s2 XCHG	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total pubkey _38
-    }>	//  credits freeze_dict tot_stakes tot_bonuses returned_bonuses recovered total pubkey
+      SWAP	//  credits freeze_dict tot_stakes tot_bonuses pubkey returned_bonuses recovered total f
+      NOT	//  credits freeze_dict tot_stakes tot_bonuses pubkey returned_bonuses recovered total _38
+      s1 s4 XCHG	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered pubkey _38
+    }>	//  credits freeze_dict tot_stakes tot_bonuses total returned_bonuses recovered pubkey
     DROP
-    s5 POP	//  credits total tot_stakes tot_bonuses returned_bonuses recovered
-    s4 s3 XCHG2	//  credits returned_bonuses recovered tot_bonuses total tot_stakes
-    EQUAL	//  credits returned_bonuses recovered tot_bonuses _40
-    s3 s1 PUSH2	//  credits returned_bonuses recovered tot_bonuses _40 returned_bonuses tot_bonuses
-    LEQ	//  credits returned_bonuses recovered tot_bonuses _40 _41
-    AND	//  credits returned_bonuses recovered tot_bonuses _42
+    s5 POP	//  credits recovered tot_stakes tot_bonuses total returned_bonuses
+    s0 s3 XCHG	//  credits recovered returned_bonuses tot_bonuses total tot_stakes
+    EQUAL	//  credits recovered returned_bonuses tot_bonuses _40
+    s2 s1 PUSH2	//  credits recovered returned_bonuses tot_bonuses _40 returned_bonuses tot_bonuses
+    LEQ	//  credits recovered returned_bonuses tot_bonuses _40 _41
+    AND	//  credits recovered returned_bonuses tot_bonuses _42
     59 THROWIFNOT
+    s1 s2 XCHG	//  credits returned_bonuses recovered tot_bonuses
     ADD	//  credits returned_bonuses _44
     SWAP	//  credits _44 returned_bonuses
     SUB	//  credits _45
