@@ -1,9 +1,6 @@
-load(
-    "@rules_apple_extras//apple:objc_library.bzl",
-    "my_swift_library",
-)
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
-my_swift_library(
+swift_library(
     name = "WalletCore",
     module_name = "WalletCore",
     srcs = glob([
