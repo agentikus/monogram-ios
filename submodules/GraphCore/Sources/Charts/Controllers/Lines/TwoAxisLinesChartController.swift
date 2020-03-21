@@ -237,7 +237,7 @@ public class TwoAxisLinesChartController: BaseLinesChartController {
         let chartHeight = chartFrame().height
         let approximateNumberOfChartValues = (chartHeight / BaseConstants.minimumAxisYLabelsDistance)
 
-        var dividorsAndMultiplers: [(startValue: CGFloat, base: CGFloat, count: Int, maximumNumberOfDecimals: Int)] = graphControllers.enumerated().map { arg in
+        let dividorsAndMultiplers: [(startValue: CGFloat, base: CGFloat, count: Int, maximumNumberOfDecimals: Int)] = graphControllers.enumerated().map { arg in
             let (index, controller) = arg
             let verticalRange = LinesChartRenderer.LineData.verticalRange(lines: controller.chartLines,
                                                                           calculatingRange: horizontalRange,
