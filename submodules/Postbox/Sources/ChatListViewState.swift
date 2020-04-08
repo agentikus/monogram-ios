@@ -138,8 +138,6 @@ private final class ChatListViewSpaceState {
         self.halfLimit = halfLimit
         self.orderedEntries = OrderedChatListViewEntries(anchorIndex: anchorIndex.index, lowerOrAtAnchor: [], higherThanAnchor: [])
         self.fillSpace(postbox: postbox)
-        
-        self.checkEntries(postbox: postbox)
     }
     
     private func fillSpace(postbox: Postbox) {
@@ -217,7 +215,7 @@ private final class ChatListViewSpaceState {
                     if let lastMessage = lowerOrAtAnchorMessages.min(by: { $0.entryIndex < $1.entryIndex }) {
                         nextLowerIndex = lastMessage.entryIndex
                     } else {
-                        nextLowerIndex = resolvedAnchorIndex.successor
+                        nextLowerIndex = resolvedAnchorIndex.predecessor
                     }
                     let loadedLowerMessages = postbox.chatListTable.entries(groupId: groupId, from: (nextLowerIndex.index, nextLowerIndex.isMessage), to: (lowerBound.index, lowerBound.isMessage), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: self.halfLimit - lowerOrAtAnchorMessages.count, predicate: filterPredicate.flatMap { mappedChatListFilterPredicate(postbox: postbox, groupId: groupId, predicate: $0) }).map(mapEntry)
                     lowerOrAtAnchorMessages.append(contentsOf: loadedLowerMessages)
@@ -381,9 +379,6 @@ private final class ChatListViewSpaceState {
                         }
                         if self.add(entry: .IntermediateMessageEntry(index: updatedIndex, messageIndex: messageIndex)) {
                             hasUpdates = true
-                        } else {
-                            hasUpdates = true
-                            hadRemovals = true
                         }
                     case let .peers(peerIds, asPinned):
                         if let peerIndex = peerIds.firstIndex(of: index.messageIndex.id.peerId) {
@@ -393,9 +388,6 @@ private final class ChatListViewSpaceState {
                             }
                             if self.add(entry: .IntermediateMessageEntry(index: updatedIndex, messageIndex: messageIndex)) {
                                 hasUpdates = true
-                            } else {
-                                hasUpdates = true
-                                hadRemovals = true
                             }
                         } else {
                             continue inner
@@ -407,9 +399,6 @@ private final class ChatListViewSpaceState {
                         if spaceGroupId == groupId && !pinned.include {
                             if self.add(entry: .HoleEntry(hole)) {
                                 hasUpdates = true
-                            } else {
-                                hasUpdates = true
-                                hadRemovals = true
                             }
                         }
                     case .peers:
@@ -551,9 +540,6 @@ private final class ChatListViewSpaceState {
                                         case let .message(index, messageIndex):
                                             if self.add(entry: .IntermediateMessageEntry(index: index, messageIndex: messageIndex)) {
                                                 hasUpdates = true
-                                            } else {
-                                                hasUpdates = true
-                                                hadRemovals = true
                                             }
                                         default:
                                             break
@@ -752,9 +738,6 @@ private final class ChatListViewSpaceState {
                                         case let .message(index, messageIndex):
                                             if self.add(entry: .IntermediateMessageEntry(index: index, messageIndex: messageIndex)) {
                                                 hasUpdates = true
-                                            } else {
-                                                hasUpdates = true
-                                                hadRemovals = true
                                             }
                                         default:
                                             break
@@ -804,44 +787,10 @@ private final class ChatListViewSpaceState {
             }
         }
         
-        self.fillSpace(postbox: postbox)
-        
-        self.checkEntries(postbox: postbox)
-        self.checkReplayEntries(postbox: postbox)
-        
-        return hasUpdates
-    }
-    
-    private func checkEntries(postbox: Postbox) {
-        #if DEBUG
-        if case .group(.root, .notPinned, nil) = self.space {
-            let allEntries = self.orderedEntries.lowerOrAtAnchor + self.orderedEntries.higherThanAnchor
-            if !allEntries.isEmpty {
-                assert(allEntries.sorted(by: { $0.index < $1.index }) == allEntries)
-                
-                func mapEntry(_ entry: ChatListIntermediateEntry) -> MutableChatListEntry {
-                    switch entry {
-                    case let .message(index, messageIndex):
-                        return .IntermediateMessageEntry(index: index, messageIndex: messageIndex)
-                    case let .hole(hole):
-                        return .HoleEntry(hole)
-                    }
-                }
-                
-                let loadedEntries = postbox.chatListTable.entries(groupId: .root, from: (allEntries[0].index.predecessor, true), to: (allEntries[allEntries.count - 1].index.successor, true), peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1000, predicate: nil).map(mapEntry)
-                
-                assert(loadedEntries.map({ $0.index }) == allEntries.map({ $0.index }))
-            }
+        if hadRemovals {
+            self.fillSpace(postbox: postbox)
         }
-        #endif
-    }
-    
-    private func checkReplayEntries(postbox: Postbox) {
-        #if DEBUG
-        let cleanState = ChatListViewSpaceState(postbox: postbox, space: self.space, anchorIndex: self.anchorIndex, summaryComponents: self.summaryComponents, halfLimit: self.halfLimit)
-        assert(self.orderedEntries.lowerOrAtAnchor.map { $0.index } == cleanState.orderedEntries.lowerOrAtAnchor.map { $0.index })
-        assert(self.orderedEntries.higherThanAnchor.map { $0.index } == cleanState.orderedEntries.higherThanAnchor.map { $0.index })
-        #endif
+        return hasUpdates
     }
     
     private func add(entry: MutableChatListEntry) -> Bool {
@@ -856,7 +805,7 @@ private final class ChatListViewSpaceState {
                 }
             }
             
-            if insertionIndex == 0 {
+            if insertionIndex == 0 && self.orderedEntries.lowerOrAtAnchor.count >= self.halfLimit {
                 return false
             }
             self.orderedEntries.insertLowerOrAtAnchorAtArrayIndex(insertionIndex, value: entry)
@@ -875,7 +824,7 @@ private final class ChatListViewSpaceState {
                 }
             }
             
-            if insertionIndex == self.orderedEntries.higherThanAnchor.count {
+            if insertionIndex == self.orderedEntries.higherThanAnchor.count && self.orderedEntries.higherThanAnchor.count >= self.halfLimit {
                 return false
             }
             self.orderedEntries.insertHigherThanAnchorAtArrayIndex(insertionIndex, value: entry)
@@ -892,11 +841,11 @@ private struct MutableChatListEntryIndex: Hashable, Comparable {
     var isMessage: Bool
     
     var predecessor: MutableChatListEntryIndex {
-        return MutableChatListEntryIndex(index: self.index.predecessor, isMessage: self.isMessage)
+        return MutableChatListEntryIndex(index: self.index.predecessor, isMessage: true)
     }
     
     var successor: MutableChatListEntryIndex {
-        return MutableChatListEntryIndex(index: self.index.successor, isMessage: self.isMessage)
+        return MutableChatListEntryIndex(index: self.index.successor, isMessage: true)
     }
     
     static let absoluteLowerBound = MutableChatListEntryIndex(index: .absoluteLowerBound, isMessage: true)
