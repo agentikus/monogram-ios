@@ -336,6 +336,9 @@ private final class ChatListViewSpaceState {
                 self.orderedEntries = entries
             }
         }
+        
+        precondition(self.orderedEntries.lowerOrAtAnchor.count <= self.halfLimit)
+        precondition(self.orderedEntries.higherThanAnchor.count <= self.halfLimit)
     }
     
     func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
@@ -804,7 +807,9 @@ private final class ChatListViewSpaceState {
             }
         }
         
-        self.fillSpace(postbox: postbox)
+        if true || hadRemovals {
+            self.fillSpace(postbox: postbox)
+        }
         
         self.checkEntries(postbox: postbox)
         self.checkReplayEntries(postbox: postbox)
