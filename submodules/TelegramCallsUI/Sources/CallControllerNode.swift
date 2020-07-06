@@ -133,7 +133,7 @@ private final class OutgoingVideoNode: ASDisplayNode {
     }
 }
 
-final class CallControllerNode: ASDisplayNode {
+final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
     private enum VideoNodeCorner {
         case topLeft
         case topRight
