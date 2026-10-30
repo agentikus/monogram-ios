@@ -358,6 +358,10 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
 }
 
 private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, willValidate: Bool) -> Signal<Never, PeerReadStateValidationError> {
+    if !MonogramSettings.shared.sendReadMessages {
+        return confirmSynchronized(postbox: postbox, peerId: peerId)
+        |> ignoreValues
+    }
     let currentReadState = postbox.transaction { transaction -> (MessageId.Namespace, PeerReadState)? in
         if let readStates = transaction.getPeerReadStates(peerId) {
             for (namespace, readState) in readStates {

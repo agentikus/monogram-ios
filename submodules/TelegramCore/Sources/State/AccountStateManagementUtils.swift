@@ -4597,19 +4597,23 @@ func replayFinalState(
             case let .DeleteEphemeralMessages(peerId, ids):
                 deleteEphemeralMessages(transaction: transaction, peerId: peerId, ids: ids)
             case let .DeleteMessagesWithGlobalIds(ids):
-                var resourceIds: [MediaResourceId] = []
-                transaction.deleteMessagesWithGlobalIds(ids, forEachMedia: { media in
-                    addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
-                })
-                if !resourceIds.isEmpty {
-                    let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
+                if !MonogramSettings.shared.saveDeletedMessages {
+                    var resourceIds: [MediaResourceId] = []
+                    transaction.deleteMessagesWithGlobalIds(ids, forEachMedia: { media in
+                        addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
+                    })
+                    if !resourceIds.isEmpty {
+                        let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
+                    }
+                    deletedMessageIds.append(contentsOf: ids.map { .global($0) })
                 }
-                deletedMessageIds.append(contentsOf: ids.map { .global($0) })
             case let .DeleteMessages(ids):
-                _internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
-                    addMessageThreadStatsDifference(threadKey: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
-                })
-                deletedMessageIds.append(contentsOf: ids.map { .messageId($0) })
+                if !MonogramSettings.shared.saveDeletedMessages {
+                    _internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
+                        addMessageThreadStatsDifference(threadKey: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
+                    })
+                    deletedMessageIds.append(contentsOf: ids.map { .messageId($0) })
+                }
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {
                     updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
@@ -4689,7 +4693,14 @@ func replayFinalState(
                         updatedMedia = previousMessage.media
                     }
                     
-                    return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes).withUpdatedMedia(updatedMedia))
+                    var updatedText = message.text
+                    if MonogramSettings.shared.markEditedMessages && !previousMessage.text.isEmpty && previousMessage.text != message.text {
+                        if !previousMessage.text.contains("Было:") {
+                            updatedText = "\(message.text)\n\n[Было: \(previousMessage.text)]"
+                        }
+                    }
+
+                    return .update(message.withUpdatedText(updatedText).withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes).withUpdatedMedia(updatedMedia))
                 })
                 if let generatedEvent = generatedEvent {
                     addedReactionEvents.append(generatedEvent)
