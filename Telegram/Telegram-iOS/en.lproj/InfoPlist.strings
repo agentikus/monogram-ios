@@ -1,3 +1,5 @@
+"CFBundleDisplayName" = "Monogram";
+"CFBundleName" = "Monogram";
 /* Localized versions of Info.plist keys */
 
 "NSContactsUsageDescription" = "Telegram will continuously upload your contacts to its heavily encrypted cloud servers to let you connect with your friends across all your devices.";

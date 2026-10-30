@@ -43,6 +43,12 @@ private final class AccountPresenceManagerImpl {
     }
     
     private func updatePresence(_ isOnline: Bool) {
+        if isOnline && !MonogramSettings.shared.sendOnline {
+            self.onlineTimer?.invalidate()
+            self.onlineTimer = nil
+            self.isPerformingUpdate.set(false)
+            return
+        }
         let request: Signal<Api.Bool, MTRpcError>
         if isOnline {
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in
