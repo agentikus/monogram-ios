@@ -30,6 +30,13 @@ public enum TranslationTone: String {
 }
 
 func _internal_translate(network: Network, text: String, toLang: String, entities: [MessageTextEntity] = [], tone: TranslationTone = .neutral, peer: Api.InputPeer? = nil, messageId: Int32? = nil) -> Signal<(String, [MessageTextEntity])?, TranslationError> {
+    if MonogramSettings.shared.translationProvider == "google" && !text.isEmpty {
+        return monogramGoogleTranslate(text: text, toLang: toLang)
+        |> map { translated -> (String, [MessageTextEntity])? in
+            return (translated, [])
+        }
+    }
+    
     var flags: Int32 = 0
 
     if tone != .neutral {
@@ -172,6 +179,13 @@ func _internal_composeRichMessageWithAI(account: Account, instantPage: InstantPa
 }
 
 func _internal_translateTexts(network: Network, texts: [(String, [MessageTextEntity])], toLang: String, tone: TranslationTone = .neutral) -> Signal<[(String, [MessageTextEntity])], TranslationError> {
+    if MonogramSettings.shared.translationProvider == "google" && !texts.isEmpty && !texts.contains(where: { $0.0.isEmpty }) {
+        return combineLatest(texts.map { monogramGoogleTranslate(text: $0.0, toLang: toLang) })
+        |> map { translated -> [(String, [MessageTextEntity])] in
+            return translated.map { ($0, []) }
+        }
+    }
+    
     var flags: Int32 = 0
     flags |= (1 << 1)
     

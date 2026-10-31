@@ -40,6 +40,15 @@ private enum MonogramSettingsOption: Int32 {
     case messageDetails
     case semiTransparentDeleted
     case markReadAfterAction
+    case useScheduled
+    case hidePremiumStatuses
+    case filtersEnabled
+    case openFilters
+    case hideBadge
+    case hideCounters
+    case streamerMode
+    case showPeerId
+    case cycleTranslation
 }
 
 private enum MonogramSettingsEntry: ItemListNodeEntry {
@@ -160,7 +169,19 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.toggle(301, .localPremium, "Локальный премиум", settings.localPremium))
     entries.append(.toggle(302, .disableStories, "Скрыть ленту историй", settings.disableStories))
     entries.append(.toggle(303, .disableAds, "Отключить рекламу", settings.disableAds))
-    entries.append(.footer(304, "Локальный премиум включает премиум-интерфейс, стикеры и эмодзи только на этом устройстве. Серверные возможности премиума он не включает. Перезапустите приложение, чтобы изменение вступило в силу."))
+    entries.append(.toggle(305, .hidePremiumStatuses, "Скрыть премиум-статусы", settings.hidePremiumStatuses))
+    entries.append(.footer(306, "Локальный премиум включает премиум-интерфейс, стикеры и эмодзи только на этом устройстве. Серверные возможности премиума он не включает. Перезапустите приложение, чтобы изменение вступило в силу."))
+
+    entries.append(.header(400, "ДОПОЛНИТЕЛЬНО"))
+    entries.append(.toggle(401, .useScheduled, "Отправлять как запланированные (призрак)", settings.useScheduledMessages))
+    entries.append(.toggle(402, .filtersEnabled, "Фильтры сообщений", settings.filtersEnabled))
+    entries.append(.choice(403, .openFilters, "Список фильтров", "\(MonogramFilters.shared.filters.count)"))
+    entries.append(.toggle(404, .showPeerId, "Показывать ID в профиле", settings.showPeerId))
+    entries.append(.toggle(405, .streamerMode, "Режим стримера (скрыть номер)", settings.streamerMode))
+    entries.append(.toggle(406, .hideBadge, "Скрыть значок на иконке приложения", settings.hideNotificationBadge))
+    entries.append(.toggle(407, .hideCounters, "Скрыть счётчики непрочитанных в чатах", settings.hideNotificationCounters))
+    entries.append(.choice(408, .cycleTranslation, "Переводчик", MonogramSettings.translationProviders.first(where: { $0.0 == settings.translationProvider })?.1 ?? settings.translationProvider))
+    entries.append(.footer(409, "Запланированная отправка: в режиме призрака сообщения уходят как запланированные через ~12 секунд, чтобы не отмечать вас онлайн. Фильтры скрывают входящие сообщения с указанным текстом; регулярные выражения пишутся в виде /шаблон/. Часть изменений применяется после перезапуска."))
 
     return entries
 }
@@ -215,6 +236,26 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.showMessageSeconds = value
         case .suggestGhostStory:
             settings.suggestGhostBeforeStory = value
+        case .useScheduled:
+            settings.useScheduledMessages = value
+        case .hidePremiumStatuses:
+            settings.hidePremiumStatuses = value
+        case .filtersEnabled:
+            settings.filtersEnabled = value
+        case .openFilters:
+            pushControllerImpl?(monogramFiltersController(context: context))
+        case .hideBadge:
+            settings.hideNotificationBadge = value
+        case .hideCounters:
+            settings.hideNotificationCounters = value
+        case .streamerMode:
+            settings.streamerMode = value
+        case .showPeerId:
+            settings.showPeerId = value
+        case .cycleTranslation:
+            let providers = MonogramSettings.translationProviders
+            let currentIndex = providers.firstIndex(where: { $0.0 == settings.translationProvider }) ?? 0
+            settings.translationProvider = providers[(currentIndex + 1) % providers.count].0
         case .cycleDeletedMark:
             let presets = MonogramSettings.deletedMarkPresets
             let currentIndex = presets.firstIndex(of: settings.deletedMark) ?? 0

@@ -103,6 +103,7 @@ func infoItems(
         let ItemPhoneNumber = 3000
         let ItemUsername = 3001
         let ItemBirthdate = 3002
+        let ItemMonogramPeerId = 3006
         let ItemAbout = 3003
         let ItemNote = 3004
         let ItemAppFooter = 3005
@@ -174,7 +175,7 @@ func infoItems(
         }
         
         if let phone = user.phone {
-            let formattedPhone = formatPhoneNumber(context: context, number: phone)
+            let formattedPhone = MonogramSettings.shared.streamerMode ? "+• ••• •••• ••••" : formatPhoneNumber(context: context, number: phone)
             let label: String
             if formattedPhone.hasPrefix("+888 ") {
                 label = presentationData.strings.UserInfo_AnonymousNumberLabel
@@ -186,6 +187,14 @@ func infoItems(
             }, longTapAction: nil, contextAction: { node, gesture, _ in
                 interaction.openPhone(phone, node, gesture, nil)
             }, requestLayout: { animated in
+                interaction.requestLayout(animated)
+            }))
+        }
+        if MonogramSettings.shared.showPeerId {
+            let monogramPeerIdText = "\(user.id.id._internalGetInt64Value())"
+            items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemMonogramPeerId, label: "ID", text: monogramPeerIdText, textColor: .primary, action: { _, _ in
+                UIPasteboard.general.string = monogramPeerIdText
+            }, longTapAction: nil, requestLayout: { animated in
                 interaction.requestLayout(animated)
             }))
         }

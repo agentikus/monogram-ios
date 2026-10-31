@@ -2002,7 +2002,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     //UIApplication.shared.applicationIconBadgeNumber = 1
                 }
             }
-            UIApplication.shared.applicationIconBadgeNumber = Int(count)
+            UIApplication.shared.applicationIconBadgeNumber = MonogramSettings.shared.hideNotificationBadge ? 0 : Int(count)
         }))
     }
 
