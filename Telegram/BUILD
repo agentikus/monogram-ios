@@ -334,6 +334,19 @@ alternate_icon_folders = [
     "Premium",
     "PremiumBlack",
     "PremiumTurbo",
+    "MonogramIcon",
+    "AyuDefault",
+    "AyuAlt",
+    "AyuBard",
+    "AyuChibi",
+    "AyuChibi2",
+    "AyuDiscord",
+    "AyuExtera",
+    "AyuExtera2",
+    "AyuNothing",
+    "AyuSpotify",
+    "AyuWin95",
+    "AyuYaPlus",
 ]
 
 composer_icon_folders = ["Telegram"]
