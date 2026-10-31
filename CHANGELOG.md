@@ -92,4 +92,3 @@
 - Меню ID в профиле: «Копировать дату» заменено на «Скопировать ID» (PeerInfoScreenOpenMonogramId.swift).
 - Claude-чат: настоящее усилие через output_config.effort (low/medium/high) вместо длины ответа; max_tokens 16000, таймаут 300 с; повтор без effort при 400; обработка refusal (MonogramClaudeController.swift). Сверено со справочником Claude API.
 - Ключ Claude API перенесён в Keychain (kSecAttrAccessibleWhenUnlockedThisDeviceOnly), старое значение из UserDefaults мигрирует при первом чтении (MonogramSettings.swift).
-- ИИ-чат: добавлен провайдер Gemini (generateContent, x-goog-api-key, модели 2.5 Flash/3.8 Flash/3.5 Flash-Lite/2.5 Pro; по умолчанию gemini-2.5-flash), переключатель Gemini/Claude, ключи в Keychain (MonogramClaudeController.swift, MonogramSettings.swift, MonogramSettingsController.swift).

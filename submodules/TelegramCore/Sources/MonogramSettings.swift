@@ -325,76 +325,43 @@ public final class MonogramSettings {
         set { self.defaults.set(newValue, forKey: "monogram_filterZalgo") }
     }
 
-    private func keychainQuery(_ account: String) -> [String: Any] {
+    private func keychainQuery() -> [String: Any] {
         return [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "monogram.ai",
-            kSecAttrAccount as String: account
+            kSecAttrService as String: "monogram.claude",
+            kSecAttrAccount as String: "apiKey"
         ]
     }
-    
-    private func keychainRead(_ account: String) -> String? {
-        var query = self.keychainQuery(account)
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: AnyObject?
-        if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess, let data = result as? Data {
-            return String(data: data, encoding: .utf8)
-        }
-        return nil
-    }
-    
-    private func keychainWrite(_ account: String, _ value: String) {
-        SecItemDelete(self.keychainQuery(account) as CFDictionary)
-        if value.isEmpty {
-            return
-        }
-        var attributes = self.keychainQuery(account)
-        attributes[kSecValueData as String] = Data(value.utf8)
-        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        SecItemAdd(attributes as CFDictionary, nil)
-    }
-    
-    /// Ключи хранятся в Keychain (только на этом устройстве).
+
+    /// Хранится в Keychain (только на этом устройстве). Старое значение из UserDefaults переносится при первом чтении.
     public var claudeApiKey: String {
         get {
-            if let value = self.keychainRead("claudeApiKey") {
+            var query = self.keychainQuery()
+            query[kSecReturnData as String] = true
+            query[kSecMatchLimit as String] = kSecMatchLimitOne
+            var result: AnyObject?
+            if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess, let data = result as? Data, let value = String(data: data, encoding: .utf8) {
                 return value
             }
             if let legacy = self.defaults.string(forKey: "monogram_claudeApiKey"), !legacy.isEmpty {
-                self.keychainWrite("claudeApiKey", legacy)
+                self.claudeApiKey = legacy
                 self.defaults.removeObject(forKey: "monogram_claudeApiKey")
                 return legacy
             }
             return ""
         }
-        set { self.keychainWrite("claudeApiKey", newValue) }
+        set {
+            SecItemDelete(self.keychainQuery() as CFDictionary)
+            if newValue.isEmpty {
+                return
+            }
+            var attributes = self.keychainQuery()
+            attributes[kSecValueData as String] = Data(newValue.utf8)
+            attributes[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            SecItemAdd(attributes as CFDictionary, nil)
+        }
     }
-    
-    public var geminiApiKey: String {
-        get { return self.keychainRead("geminiApiKey") ?? "" }
-        set { self.keychainWrite("geminiApiKey", newValue) }
-    }
-    
-    public static let aiProviders: [(id: String, title: String)] = [("gemini", "Gemini"), ("claude", "Claude")]
-    
-    public var aiProvider: String {
-        get { return self.defaults.string(forKey: "monogram_aiProvider") ?? "gemini" }
-        set { self.defaults.set(newValue, forKey: "monogram_aiProvider") }
-    }
-    
-    public static let geminiModels: [(id: String, title: String)] = [
-        ("gemini-2.5-flash", "Gemini 2.5 Flash"),
-        ("gemini-3.8-flash", "Gemini 3.8 Flash"),
-        ("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite"),
-        ("gemini-2.5-pro", "Gemini 2.5 Pro")
-    ]
-    
-    public var geminiModel: String {
-        get { return self.defaults.string(forKey: "monogram_geminiModel") ?? "gemini-2.5-flash" }
-        set { self.defaults.set(newValue, forKey: "monogram_geminiModel") }
-    }
-    
+
     public static let claudeModels: [(id: String, title: String)] = [
         ("claude-haiku-5-5", "Haiku 5.5"),
         ("claude-sonnet-5-5", "Sonnet 5.5"),

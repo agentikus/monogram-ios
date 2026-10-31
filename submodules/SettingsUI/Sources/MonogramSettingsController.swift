@@ -217,8 +217,8 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.footer(502, "Удалённые и изменённые сообщения, одноразовые медиа записываются по чатам (имя, username и ID) в папку Monogram в приложении «Файлы» → «На iPhone». Если выбрать свою папку, копия будет дублироваться и туда и переживёт удаление приложения."))
 
     entries.append(.header(450, "ИИ"))
-    entries.append(.choice(451, .openClaude, "Чат с ИИ (Gemini / Claude)", (settings.aiProvider == "gemini" ? settings.geminiApiKey : settings.claudeApiKey).isEmpty ? "нет ключа" : "готов"))
-    entries.append(.footer(452, "Gemini (есть бесплатный ключ в Google AI Studio) или Claude (платный API). Ключ хранится только на устройстве."))
+    entries.append(.choice(451, .openClaude, "Чат с Claude", settings.claudeApiKey.isEmpty ? "нет ключа" : "готов"))
+    entries.append(.footer(452, "Свой ключ API Anthropic, выбор модели и усилия. Ключ хранится только на устройстве."))
 
     entries.append(.header(400, "ДОПОЛНИТЕЛЬНО"))
     entries.append(.toggle(401, .useScheduled, "Отправлять как запланированные (призрак)", settings.useScheduledMessages))
