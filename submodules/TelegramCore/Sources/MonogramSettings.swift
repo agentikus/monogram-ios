@@ -224,6 +224,15 @@ public final class MonogramSettings {
         }
     }
     
+    public var peekSelfDestructing: Bool {
+        get {
+            return (defaults.object(forKey: "monogram_peekSelfDestructing") as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: "monogram_peekSelfDestructing")
+        }
+    }
+    
     public var hidePremiumStatuses: Bool {
         get {
             return (defaults.object(forKey: hidePremiumStatusesKey) as? Bool) ?? false

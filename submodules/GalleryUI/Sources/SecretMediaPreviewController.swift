@@ -157,6 +157,8 @@ public final class SecretMediaPreviewController: ViewController {
     
     private let disposable = MetaDisposable()
     private let markMessageAsConsumedDisposable = MetaDisposable()
+    private var monogramBurnButton: UIButton?
+    private var monogramBurnAction: (() -> Void)?
     
     private var controllerNode: SecretMediaPreviewControllerNode {
         return self.displayNode as! SecretMediaPreviewControllerNode
@@ -561,8 +563,17 @@ public final class SecretMediaPreviewController: ViewController {
                     }
                 }
                 if message.flags.contains(.Incoming) {
-                    monogramSaveSelfDestructingMedia(postbox: self.context.account.postbox, message: message, peerTitle: message.peers[message.id.peerId]?.debugDisplayTitle ?? "", completion: monogramConsume)
-                    Queue.mainQueue().after(6.0, monogramConsume)
+                    let monogramPeek = MonogramSettings.shared.peekSelfDestructing
+                    monogramSaveSelfDestructingMedia(postbox: self.context.account.postbox, message: message, peerTitle: message.peers[message.id.peerId]?.debugDisplayTitle ?? "", completion: {
+                        if !monogramPeek {
+                            monogramConsume()
+                        }
+                    })
+                    if monogramPeek {
+                        self.monogramPresentBurnButton(onBurn: monogramConsume)
+                    } else {
+                        Queue.mainQueue().after(6.0, monogramConsume)
+                    }
                 } else {
                     monogramConsume()
                 }
@@ -613,6 +624,36 @@ public final class SecretMediaPreviewController: ViewController {
             }
             self.currentMessageIsDismissed = true
         }
+    }
+    
+    private func monogramPresentBurnButton(onBurn: @escaping () -> Void) {
+        self.monogramBurnButton?.removeFromSuperview()
+        let button = UIButton(type: .system)
+        button.setTitle("🔥 Сжечь", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 17.0, weight: .semibold)
+        button.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
+        button.layer.cornerRadius = 22.0
+        button.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 24.0, bottom: 0.0, right: 24.0)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        self.monogramBurnAction = onBurn
+        button.addTarget(self, action: #selector(self.monogramBurnPressed), for: .touchUpInside)
+        let container = self.controllerNode.view
+        container.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            button.bottomAnchor.constraint(equalTo: container.safeAreaLayoutGuide.bottomAnchor, constant: -24.0),
+            button.heightAnchor.constraint(equalToConstant: 44.0)
+        ])
+        self.monogramBurnButton = button
+    }
+    
+    @objc private func monogramBurnPressed() {
+        self.monogramBurnButton?.removeFromSuperview()
+        self.monogramBurnButton = nil
+        let action = self.monogramBurnAction
+        self.monogramBurnAction = nil
+        action?()
     }
     
     private func dismissAllTooltips() {
