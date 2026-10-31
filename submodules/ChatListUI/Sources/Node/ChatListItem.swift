@@ -1809,6 +1809,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
+            if case let .peer(monogramPeerData) = item.content, monogramPeerData.peer.peerId == monogramClaudePeerId {
+                gesture?.cancel()
+                return
+            }
             var threadId: Int64?
             if let value = strongSelf.hitTest(location, with: nil), value === strongSelf.compoundTextButtonNode?.view {
                 if case let .peer(peerData) = item.content, let topicItem = peerData.topForumTopicItems.first {
@@ -1834,6 +1838,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     override public func secondaryAction(at point: CGPoint) {
         guard let item = self.item else {
+            return
+        }
+        if case let .peer(monogramPeerData) = item.content, monogramPeerData.peer.peerId == monogramClaudePeerId {
             return
         }
         item.interaction.activateChatPreview?(item, nil, self.contextContainer, nil, point)
@@ -5464,7 +5471,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.updateLayout(size: CGSize(width: layout.contentSize.width, height: itemHeight), leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    if item.editing {
+                    var isMonogramClaudeRow = false
+                    if case let .peer(monogramPeerData) = item.content, monogramPeerData.peer.peerId == monogramClaudePeerId {
+                        isMonogramClaudeRow = true
+                    }
+                    if item.editing || isMonogramClaudeRow {
                         strongSelf.setRevealOptions((left: [], right: []), enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                     } else {
                         strongSelf.setRevealOptions((left: peerLeftRevealOptions, right: peerRevealOptions), enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)

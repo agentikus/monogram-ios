@@ -357,6 +357,8 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
                 switch result {
                 case let .success(answer):
                     state.messages.append(MonogramClaudeMessage(role: "assistant", text: answer))
+                    settings.claudeLastPreview = String(answer.prefix(200)).replacingOccurrences(of: "\n", with: " ")
+                    settings.claudeLastTimestamp = Int32(Date().timeIntervalSince1970)
                 case let .failure(error):
                     state.messages.removeLast()
                     state.input = text

@@ -641,13 +641,21 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     }
     
     var pinnedIndexOffset: UInt16 = 0
-    
+
+    var showMonogramClaude = false
+    if isMainTab && !view.hasLater && savedMessagesPeer == nil && MonogramSettings.shared.showClaudeChat, case .chatList = mode {
+        showMonogramClaude = true
+    }
+
     if !view.hasLater, case .chatList = mode {
         var groupEntryCount = 0
         for _ in groupItems {
             groupEntryCount += 1
         }
         pinnedIndexOffset += UInt16(groupEntryCount)
+    }
+    if showMonogramClaude {
+        pinnedIndexOffset += 1
     }
     
     let filteredAdditionalItemEntries = view.additionalItems.filter { item -> Bool in
@@ -945,6 +953,43 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                 }
             }
             
+            if showMonogramClaude {
+                let claudeMessages = monogramClaudeMessages()
+                result.append(.PeerEntry(ChatListNodeEntry.PeerEntryData(
+                    index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex, messageIndex: EngineMessage.Index(id: claudeMessages[0].id, timestamp: claudeMessages[0].timestamp))),
+                    presentationData: state.presentationData,
+                    messages: claudeMessages,
+                    readState: nil,
+                    isRemovedFromTotalUnreadCount: true,
+                    draftState: nil,
+                    mediaDraftContentType: nil,
+                    peer: monogramClaudeRenderedPeer(),
+                    threadInfo: nil,
+                    presence: nil,
+                    hasUnseenMentions: false,
+                    hasUnseenReactions: false,
+                    hasUnseenPollVotes: false,
+                    editing: state.editing,
+                    hasActiveRevealControls: false,
+                    selected: false,
+                    inputActivities: nil,
+                    promoInfo: nil,
+                    hasFailedMessages: false,
+                    isContact: false,
+                    autoremoveTimeout: nil,
+                    forumTopicData: nil,
+                    topForumTopicItems: [],
+                    revealed: false,
+                    storyState: nil,
+                    requiresPremiumForMessaging: false,
+                    displayAsTopicList: false
+                )))
+                if pinningIndex != 0 {
+                    pinningIndex -= 1
+                }
+                hasPinned = true
+            }
+
             if displayArchiveIntro {
                 //result.append(.ArchiveIntro(presentationData: state.presentationData))
             } else if !contacts.isEmpty && !result.contains(where: { entry in

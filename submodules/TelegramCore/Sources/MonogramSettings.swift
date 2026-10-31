@@ -384,6 +384,21 @@ public final class MonogramSettings {
         set { self.defaults.set(newValue, forKey: "monogram_claudeEffort") }
     }
 
+    public var showClaudeChat: Bool {
+        get { return (self.defaults.object(forKey: "monogram_showClaudeChat") as? Bool) ?? true }
+        set { self.defaults.set(newValue, forKey: "monogram_showClaudeChat") }
+    }
+
+    public var claudeLastPreview: String {
+        get { return self.defaults.string(forKey: "monogram_claudeLastPreview") ?? "" }
+        set { self.defaults.set(newValue, forKey: "monogram_claudeLastPreview") }
+    }
+
+    public var claudeLastTimestamp: Int32 {
+        get { return Int32(truncatingIfNeeded: self.defaults.integer(forKey: "monogram_claudeLastTimestamp")) }
+        set { self.defaults.set(Int(newValue), forKey: "monogram_claudeLastTimestamp") }
+    }
+
     public var hideScreenshotNotifications: Bool {
         get {
             return (defaults.object(forKey: "monogram_hideScreenshotNotifications") as? Bool) ?? true
