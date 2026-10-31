@@ -189,7 +189,7 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
 
     entries.append(.header(200, "ОФОРМЛЕНИЕ И ОТПРАВКА"))
     entries.append(.choice(202, .cycleEditedMark, "Метка изменённого сообщения", settings.editedMark))
-    entries.append(.choice(207, .cycleBurnedMark, "Метка сожжённого сообщения", settings.burnedMark))
+    entries.append(.choice(215, .cycleBurnedMark, "Метка сожжённого сообщения", settings.burnedMark))
     entries.append(.toggle(206, .messageDetails, "Пункт «Детали сообщения» в меню", settings.showMessageDetails))
     entries.append(.toggle(203, .showSeconds, "Показывать секунды во времени сообщения", settings.showMessageSeconds))
     entries.append(.toggle(201, .removeTail, "Убрать хвостик у сообщений", settings.removeMessageTail))
