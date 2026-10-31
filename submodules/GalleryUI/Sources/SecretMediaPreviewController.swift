@@ -573,7 +573,10 @@ public final class SecretMediaPreviewController: ViewController {
                         }
                     })
                     if monogramPeek {
-                        self.monogramPresentBurnButton(onBurn: monogramConsume)
+                        self.monogramPresentBurnButton(onBurn: {
+                            MonogramSettings.shared.markBurned(monogramMessageId)
+                            monogramConsume()
+                        })
                     } else {
                         Queue.mainQueue().after(6.0, monogramConsume)
                     }
@@ -644,7 +647,7 @@ public final class SecretMediaPreviewController: ViewController {
         container.addSubview(button)
         NSLayoutConstraint.activate([
             button.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            button.bottomAnchor.constraint(equalTo: container.safeAreaLayoutGuide.bottomAnchor, constant: -24.0),
+            button.bottomAnchor.constraint(equalTo: container.safeAreaLayoutGuide.bottomAnchor, constant: -150.0),
             button.heightAnchor.constraint(equalToConstant: 44.0),
             button.widthAnchor.constraint(equalToConstant: 150.0)
         ])
@@ -666,7 +669,7 @@ public final class SecretMediaPreviewController: ViewController {
         container.addSubview(button)
         NSLayoutConstraint.activate([
             button.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            button.bottomAnchor.constraint(equalTo: container.safeAreaLayoutGuide.bottomAnchor, constant: -80.0),
+            button.bottomAnchor.constraint(equalTo: container.safeAreaLayoutGuide.bottomAnchor, constant: -206.0),
             button.heightAnchor.constraint(equalToConstant: 44.0),
             button.widthAnchor.constraint(equalToConstant: 240.0)
         ])
@@ -716,9 +719,12 @@ public final class SecretMediaPreviewController: ViewController {
     @objc private func monogramBurnPressed() {
         self.monogramBurnButton?.removeFromSuperview()
         self.monogramBurnButton = nil
+        self.monogramSaveButton?.removeFromSuperview()
+        self.monogramSaveButton = nil
         let action = self.monogramBurnAction
         self.monogramBurnAction = nil
         action?()
+        self.dismiss()
     }
     
     private func dismissAllTooltips() {

@@ -1557,6 +1557,43 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        if message.containsSecretMedia && message.flags.contains(.Incoming) {
+            var monogramMediaReference: AnyMediaReference?
+            var monogramIsVideo = false
+            for media in message.effectiveMedia {
+                if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
+                    monogramMediaReference = ImageMediaReference.standalone(media: image).abstract
+                    break
+                } else if let file = media as? TelegramMediaFile, file.isVideo {
+                    monogramMediaReference = FileMediaReference.standalone(media: file).abstract
+                    monogramIsVideo = true
+                    break
+                }
+            }
+            if let monogramMediaReference = monogramMediaReference {
+                actions.append(.action(ContextMenuActionItem(text: "💾 Сохранить в галерею", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    let _ = (saveToCameraRoll(context: context, userLocation: .peer(message.id.peerId), mediaReference: monogramMediaReference)
+                             |> deliverOnMainQueue).startStandalone(completed: {
+                        Queue.mainQueue().after(0.2) {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: monogramIsVideo ? presentationData.strings.Gallery_VideoSaved : presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
+                        }
+                    })
+                    f(.default)
+                })))
+            }
+            let monogramMessageId = message.id
+            actions.append(.action(ContextMenuActionItem(text: "🔥 Сжечь", textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+            }, action: { _, f in
+                MonogramSettings.shared.markBurned(monogramMessageId)
+                let _ = context.engine.messages.markMessageContentAsConsumedInteractively(messageId: monogramMessageId).startStandalone()
+                f(.default)
+            })))
+        }
+        
         var downloadableMediaResourceInfos: [String] = []
         for media in message.effectiveMedia {
             if let file = media as? TelegramMediaFile {

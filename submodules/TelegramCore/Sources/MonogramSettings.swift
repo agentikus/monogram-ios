@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 
 public final class MonogramSettings {
     public static let shared = MonogramSettings()
@@ -49,14 +50,41 @@ public final class MonogramSettings {
     }
     
     func isLocalPremiumPeer(_ peerId: Int64) -> Bool {
-        if !self.localPremium {
-            return false
-        }
+        self.readPushLock.lock()
+        let isOwn = self.ownPeerIds.contains(peerId)
+        self.readPushLock.unlock()
+        return isOwn && self.localPremium
+    }
+    
+    private let burnedKey = "monogram_burnedMessages"
+    private var burnedMessages: Set<String>?
+    
+    private func burnKey(_ id: MessageId) -> String {
+        return "\(id.peerId.toInt64())_\(id.namespace)_\(id.id)"
+    }
+    
+    public func markBurned(_ id: MessageId) {
+        self.readPushLock.lock()
+        var burned = self.burnedMessages ?? Set(self.defaults.stringArray(forKey: self.burnedKey) ?? [])
+        burned.insert(self.burnKey(id))
+        self.burnedMessages = burned
+        self.defaults.set(Array(burned), forKey: self.burnedKey)
+        self.readPushLock.unlock()
+    }
+    
+    func isBurned(_ id: MessageId) -> Bool {
         self.readPushLock.lock()
         defer {
             self.readPushLock.unlock()
         }
-        return self.ownPeerIds.contains(peerId)
+        if self.burnedMessages == nil {
+            self.burnedMessages = Set(self.defaults.stringArray(forKey: self.burnedKey) ?? [])
+        }
+        return self.burnedMessages!.contains(self.burnKey(id))
+    }
+    
+    func keepsSelfDestructingMedia(_ id: MessageId) -> Bool {
+        return self.saveSelfDestructingMedia && !self.isBurned(id)
     }
     
     func setReadPushAllowed(_ peerId: Int64, _ allowed: Bool) {
