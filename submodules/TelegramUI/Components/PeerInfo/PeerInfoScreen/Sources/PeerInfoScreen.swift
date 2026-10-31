@@ -699,6 +699,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 self.openBirthdayContextMenu(node: node, gesture: gesture)
+            }, openMonogramIdContextMenu: { [weak self] node, gesture, text in
+                guard let self else {
+                    return
+                }
+                self.openMonogramIdContextMenu(node: node, gesture: gesture, text: text)
             }, openMemberContextMenu: { [weak self] member, node, gesture in
                 guard let self else {
                     return
