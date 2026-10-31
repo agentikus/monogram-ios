@@ -43,3 +43,5 @@
 ## Stage 3
 - Ghost: optional scheduled sending (useScheduledMessages), message filters (text and /regex/) with editor screen, hide premium statuses, show ID in profile, Google translator choice, hide app badge and chat counters, streamer mode (phone hidden in settings/profile).
 - Not done: hiding the "All chats" folder (too risky for the folder tab bar).
+
+- Fix: view-once/TTL media now saved from the viewer before consume (copy completes, then consume; 6s fallback).

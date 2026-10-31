@@ -549,7 +549,23 @@ public final class SecretMediaPreviewController: ViewController {
                     self?.didSetReady = true
                 }
                 self._ready.set(ready |> map { true })
-                self.markMessageAsConsumedDisposable.set(self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: message.id).start())
+                let monogramMessageId = message.id
+                var monogramConsumed = false
+                let monogramConsume: () -> Void = { [weak self] in
+                    Queue.mainQueue().async {
+                        guard let self, !monogramConsumed else {
+                            return
+                        }
+                        monogramConsumed = true
+                        self.markMessageAsConsumedDisposable.set(self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: monogramMessageId).start())
+                    }
+                }
+                if message.flags.contains(.Incoming) {
+                    monogramSaveSelfDestructingMedia(postbox: self.context.account.postbox, message: message, peerTitle: message.peers[message.id.peerId]?.debugDisplayTitle ?? "", completion: monogramConsume)
+                    Queue.mainQueue().after(6.0, monogramConsume)
+                } else {
+                    monogramConsume()
+                }
             } else {
                 var beginTimeAndTimeout: (Double, Double, Bool)?
                 var videoDuration: Double?
