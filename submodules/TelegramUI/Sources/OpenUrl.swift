@@ -570,6 +570,29 @@ private func openCheckedExternalUrl(context: AccountContext, urlContext: OpenURL
                         })
                         return
                     }
+                case "chat":
+                    if let idValue = params["id"].flatMap(Int64.init), idValue > 0 {
+                        let channelId = EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(idValue))
+                        let groupId = EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: EnginePeer.Id.Id._internalFromInt64Value(idValue))
+                        let _ = (context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.Peer(id: channelId),
+                            TelegramEngine.EngineData.Item.Peer.Peer(id: groupId)
+                        )
+                        |> deliverOnMainQueue).startStandalone(next: { channel, group in
+                            if let peer = channel ?? group, let controller = context.sharedContext.makePeerInfoController(
+                                context: context,
+                                updatedPresentationData: nil,
+                                peer: peer,
+                                mode: .generic,
+                                avatarInitiallyExpanded: false,
+                                fromChat: false,
+                                requestsContext: nil
+                            ) {
+                                navigationController?.pushViewController(controller)
+                            }
+                        })
+                        return
+                    }
                 case "login":
                     if let _ = params["token"] {
                         let alertController = textAlertController(

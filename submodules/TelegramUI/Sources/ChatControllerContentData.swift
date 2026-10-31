@@ -2334,6 +2334,11 @@ extension ChatControllerImpl {
                             chatWallpaper = cachedData.wallpaper
                         }
                         
+                        if MonogramSettings.shared.disableCustomChatBackgrounds {
+                            chatTheme = nil
+                            chatWallpaper = nil
+                        }
+
                         strongSelf.chatThemePromise.set(.single(chatTheme))
                         strongSelf.chatWallpaperPromise.set(.single(chatWallpaper))
                     }

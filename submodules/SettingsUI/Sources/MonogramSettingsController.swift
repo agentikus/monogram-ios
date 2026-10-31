@@ -78,6 +78,11 @@ private enum MonogramSettingsOption: Int32 {
     case hideScreenshotNotifications
     case localTranscription
     case cycleTranslation
+    case confirmStickersAndGifs
+    case disableChatBackgrounds
+    case hideGreetingSticker
+    case filterZalgo
+    case openClaude
 }
 
 private enum MonogramSettingsEntry: ItemListNodeEntry {
@@ -169,7 +174,7 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.header(0, "РЕЖИМ ПРИЗРАКА"))
     entries.append(.toggle(1, .ghostMode, "Режим призрака", settings.isGhostModeActive))
     entries.append(.toggle(2, .hideOnline, "Не показывать, что я в сети", !settings.sendOnline))
-    entries.append(.toggle(3, .hideTyping, "Не показывать «печатает…»", !settings.sendTyping))
+    entries.append(.toggle(3, .hideTyping, "Не показывать «печатает…», запись и загрузку", !settings.sendTyping))
     entries.append(.toggle(4, .hideReadMessages, "Не отмечать сообщения прочитанными", !settings.sendReadMessages))
     entries.append(.toggle(5, .hideReadStories, "Не отмечать истории просмотренными", !settings.sendReadStories))
     entries.append(.toggle(8, .markReadAfterAction, "Отмечать прочитанным после моего ответа", settings.markReadAfterAction))
@@ -194,6 +199,10 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.toggle(203, .showSeconds, "Показывать секунды во времени сообщения", settings.showMessageSeconds))
     entries.append(.toggle(201, .removeTail, "Убрать хвостик у сообщений", settings.removeMessageTail))
     entries.append(.toggle(204, .confirmVoiceAndVideo, "Подтверждать голосовые и кружки", settings.confirmVoiceAndVideo))
+    entries.append(.toggle(208, .confirmStickersAndGifs, "Подтверждать стикеры и гифки", settings.confirmStickersAndGifs))
+    entries.append(.toggle(209, .disableChatBackgrounds, "Отключить фоны чатов от собеседников", settings.disableCustomChatBackgrounds))
+    entries.append(.toggle(210, .hideGreetingSticker, "Скрыть приветственный стикер", settings.hideGreetingSticker))
+    entries.append(.toggle(211, .filterZalgo, "Фильтр Zalgo и BIDI-символов", settings.filterZalgo))
     entries.append(.footer(207, "После записи голосового или кружка открывается предпросмотр: можно прослушать, изменить или удалить запись и только потом отправить."))
 
     entries.append(.header(300, "ПРЕМИУМ И РЕКЛАМА"))
@@ -206,6 +215,10 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.header(500, "АРХИВ"))
     entries.append(.choice(501, .archiveFolder, "Папка для копии архива", MonogramArchive.shared.externalFolderName ?? "не выбрана"))
     entries.append(.footer(502, "Удалённые и изменённые сообщения, одноразовые медиа записываются по чатам (имя, username и ID) в папку Monogram в приложении «Файлы» → «На iPhone». Если выбрать свою папку, копия будет дублироваться и туда и переживёт удаление приложения."))
+
+    entries.append(.header(450, "ИИ"))
+    entries.append(.choice(451, .openClaude, "Чат с Claude", settings.claudeApiKey.isEmpty ? "нет ключа" : "готов"))
+    entries.append(.footer(452, "Свой ключ API Anthropic, выбор модели и усилия. Ключ хранится только на устройстве."))
 
     entries.append(.header(400, "ДОПОЛНИТЕЛЬНО"))
     entries.append(.toggle(401, .useScheduled, "Отправлять как запланированные (призрак)", settings.useScheduledMessages))
@@ -313,6 +326,16 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.hideScreenshotNotifications = value
         case .localTranscription:
             settings.localTranscription = value
+        case .confirmStickersAndGifs:
+            settings.confirmStickersAndGifs = value
+        case .disableChatBackgrounds:
+            settings.disableCustomChatBackgrounds = value
+        case .hideGreetingSticker:
+            settings.hideGreetingSticker = value
+        case .filterZalgo:
+            settings.filterZalgo = value
+        case .openClaude:
+            pushControllerImpl?(monogramClaudeController(context: context))
         case .cycleTranslation:
             let providers = MonogramSettings.translationProviders
             let currentIndex = providers.firstIndex(where: { $0.0 == settings.translationProvider }) ?? 0

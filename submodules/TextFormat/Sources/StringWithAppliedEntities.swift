@@ -542,8 +542,41 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
         paragraphStyle.alignment = paragraphAlignment
         string.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSMakeRange(0, string.length))
     }
-    
+
+    if MonogramSettings.shared.filterZalgo {
+        monogramFilterZalgo(string)
+    }
+
     return string
+}
+
+private func monogramFilterZalgo(_ string: NSMutableAttributedString) {
+    let maxCombiningRun = 3
+    var rangesToRemove: [NSRange] = []
+    var offset = 0
+    var combiningRun = 0
+    for scalar in string.string.unicodeScalars {
+        let length = scalar.utf16.count
+        let value = scalar.value
+        let isBidiControl = (value >= 0x202A && value <= 0x202E) || (value >= 0x2066 && value <= 0x2069)
+        let category = scalar.properties.generalCategory
+        let isCombining = category == .nonspacingMark || category == .enclosingMark
+        if isBidiControl {
+            rangesToRemove.append(NSRange(location: offset, length: length))
+            combiningRun = 0
+        } else if isCombining {
+            combiningRun += 1
+            if combiningRun > maxCombiningRun {
+                rangesToRemove.append(NSRange(location: offset, length: length))
+            }
+        } else {
+            combiningRun = 0
+        }
+        offset += length
+    }
+    for range in rangesToRemove.reversed() {
+        string.deleteCharacters(in: range)
+    }
 }
 
 public final class MessageSyntaxHighlight: Codable, Equatable {
