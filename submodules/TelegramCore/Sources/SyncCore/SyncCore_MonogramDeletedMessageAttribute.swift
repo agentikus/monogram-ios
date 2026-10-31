@@ -28,7 +28,7 @@ public extension Message {
     }
 }
 
-func markMessagesAsDeletedLocally(transaction: Transaction, ids: [MessageId]) {
+func markMessagesAsDeletedLocally(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId]) {
     let date = Int32(Date().timeIntervalSince1970)
     for id in ids {
         transaction.updateMessage(id, update: { currentMessage in
@@ -41,8 +41,13 @@ func markMessagesAsDeletedLocally(transaction: Transaction, ids: [MessageId]) {
             if journalText.isEmpty && !currentMessage.media.isEmpty {
                 journalText = "[медиа]"
             }
-            let peerTitle = transaction.getPeer(currentMessage.id.peerId)?.debugDisplayTitle ?? ""
-            MonogramJournal.shared.add(MonogramJournalEntry(kind: .deleted, peerId: currentMessage.id.peerId.toInt64(), namespace: currentMessage.id.namespace, id: currentMessage.id.id, date: date, peerTitle: peerTitle, text: journalText, oldText: nil))
+            let peer = transaction.getPeer(currentMessage.id.peerId)
+            let peerTitle = peer?.debugDisplayTitle ?? ""
+            let peerUsername = peer?.addressName
+            MonogramJournal.shared.add(MonogramJournalEntry(kind: .deleted, peerId: currentMessage.id.peerId.toInt64(), namespace: currentMessage.id.namespace, id: currentMessage.id.id, date: date, peerTitle: peerTitle, text: journalText, oldText: nil, peerUsername: peerUsername))
+            if !currentMessage.media.isEmpty {
+                MonogramArchive.shared.archiveMedia(of: currentMessage, mediaBox: mediaBox, title: peerTitle, username: peerUsername, kindText: "[медиа удалённого сообщения]", date: date)
+            }
             var storeForwardInfo: StoreMessageForwardInfo?
             if let forwardInfo = currentMessage.forwardInfo {
                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)

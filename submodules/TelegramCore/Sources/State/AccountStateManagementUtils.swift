@@ -4607,7 +4607,7 @@ func replayFinalState(
                     }
                     deletedMessageIds.append(contentsOf: ids.map { .global($0) })
                 } else {
-                    markMessagesAsDeletedLocally(transaction: transaction, ids: transaction.messageIdsForGlobalIds(ids))
+                    markMessagesAsDeletedLocally(transaction: transaction, mediaBox: mediaBox, ids: transaction.messageIdsForGlobalIds(ids))
                 }
             case let .DeleteMessages(ids):
                 if !MonogramSettings.shared.saveDeletedMessages {
@@ -4616,7 +4616,7 @@ func replayFinalState(
                     })
                     deletedMessageIds.append(contentsOf: ids.map { .messageId($0) })
                 } else {
-                    markMessagesAsDeletedLocally(transaction: transaction, ids: ids)
+                    markMessagesAsDeletedLocally(transaction: transaction, mediaBox: mediaBox, ids: ids)
                 }
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {
@@ -4706,8 +4706,9 @@ func replayFinalState(
                         originalText = String(previousMessage.text[markerRange.upperBound ..< previousMessage.text.index(before: previousMessage.text.endIndex)])
                     }
                     if !previousBaseText.isEmpty && previousBaseText != message.text {
-                        let peerTitle = transaction.getPeer(previousMessage.id.peerId)?.debugDisplayTitle ?? ""
-                        MonogramJournal.shared.add(MonogramJournalEntry(kind: .edited, peerId: previousMessage.id.peerId.toInt64(), namespace: previousMessage.id.namespace, id: previousMessage.id.id, date: Int32(Date().timeIntervalSince1970), peerTitle: peerTitle, text: message.text, oldText: previousBaseText))
+                        let editedPeer = transaction.getPeer(previousMessage.id.peerId)
+                        let peerTitle = editedPeer?.debugDisplayTitle ?? ""
+                        MonogramJournal.shared.add(MonogramJournalEntry(kind: .edited, peerId: previousMessage.id.peerId.toInt64(), namespace: previousMessage.id.namespace, id: previousMessage.id.id, date: Int32(Date().timeIntervalSince1970), peerTitle: peerTitle, text: message.text, oldText: previousBaseText, peerUsername: editedPeer?.addressName))
                         if MonogramSettings.shared.markEditedMessages {
                             updatedText = "\(message.text)\(editMarker)\(originalText ?? previousBaseText)]"
                         }
