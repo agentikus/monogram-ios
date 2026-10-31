@@ -168,7 +168,7 @@ private func monogramClaudeEntries(state: MonogramClaudeState) -> [MonogramClaud
     entries.append(.key(2001, settings.claudeApiKey))
     entries.append(.choice(2002, "Модель", modelTitle, 0))
     entries.append(.choice(2003, "Усилие", effortTitle, 1))
-    entries.append(.info(2004, "Ключ хранится только на этом устройстве и отправляется только на api.anthropic.com. Текст запросов оплачивается с вашего баланса Anthropic. «Усилие» задаёт подробность и длину ответа: низкое — коротко, высокое — подробно с рассуждением."))
+    entries.append(.info(2004, "Ключ хранится только на этом устройстве и отправляется только на api.anthropic.com. Текст запросов оплачивается с вашего баланса Anthropic. «Усилие» — параметр effort API: чем выше, тем глубже рассуждение модели, дольше ответ и больше расход токенов."))
 
     return entries
 }
@@ -178,66 +178,76 @@ private func monogramClaudeSend(apiKey: String, model: String, effort: String, m
         completion(.failure(MonogramClaudeError(text: "Неверный адрес API")))
         return
     }
-    let maxTokens: Int
-    let system: String
-    switch effort {
-    case "high":
-        maxTokens = 4096
-        system = "Рассуждай тщательно, проверяй себя, затем дай подробный и точный ответ. Отвечай на языке пользователя."
-    case "medium":
-        maxTokens = 2048
-        system = "Отвечай развёрнуто, но по делу. Отвечай на языке пользователя."
-    default:
-        maxTokens = 1024
-        system = "Отвечай кратко. Отвечай на языке пользователя."
-    }
-    let body: [String: Any] = [
+    // Настоящее усилие: output_config.effort (GA, без beta-заголовка). Мышление остаётся адаптивным по умолчанию.
+    // Если API отклонит этот параметр, запрос один раз повторяется без него.
+    var body: [String: Any] = [
         "model": model,
-        "max_tokens": maxTokens,
-        "system": system,
+        "max_tokens": 16000,
+        "system": "Отвечай на языке пользователя.",
+        "output_config": ["effort": effort],
         "messages": messages.map { ["role": $0.role, "content": $0.text] }
     ]
-    guard let data = try? JSONSerialization.data(withJSONObject: body) else {
-        completion(.failure(MonogramClaudeError(text: "Не удалось собрать запрос")))
+    var didRetryWithoutEffort = false
+
+    func perform() {
+        guard let data = try? JSONSerialization.data(withJSONObject: body) else {
+            completion(.failure(MonogramClaudeError(text: "Не удалось собрать запрос")))
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 300.0
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.httpBody = data
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(MonogramClaudeError(text: error.localizedDescription)))
+                return
+            }
+            guard let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                completion(.failure(MonogramClaudeError(text: "Пустой или нечитаемый ответ")))
+                return
+            }
+            if let errorInfo = json["error"] as? [String: Any] {
+                let message = (errorInfo["message"] as? String) ?? "Неизвестная ошибка API"
+                if !didRetryWithoutEffort, (response as? HTTPURLResponse)?.statusCode == 400, message.contains("output_config") || message.contains("effort") {
+                    didRetryWithoutEffort = true
+                    body.removeValue(forKey: "output_config")
+                    perform()
+                    return
+                }
+                completion(.failure(MonogramClaudeError(text: message)))
+                return
+            }
+            if (json["stop_reason"] as? String) == "refusal" {
+                completion(.failure(MonogramClaudeError(text: "Claude отказался отвечать на этот запрос")))
+                return
+            }
+            monogramClaudeHandleContent(json: json, completion: completion)
+        }.resume()
+    }
+    perform()
+}
+
+private func monogramClaudeHandleContent(json: [String: Any], completion: @escaping (Result<String, MonogramClaudeError>) -> Void) {
+    guard let content = json["content"] as? [[String: Any]] else {
+        completion(.failure(MonogramClaudeError(text: "В ответе нет текста")))
         return
     }
-    var request = URLRequest(url: url)
-    request.httpMethod = "POST"
-    request.timeoutInterval = 120.0
-    request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-    request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-    request.setValue("application/json", forHTTPHeaderField: "content-type")
-    request.httpBody = data
-
-    URLSession.shared.dataTask(with: request) { data, response, error in
-        if let error = error {
-            completion(.failure(MonogramClaudeError(text: error.localizedDescription)))
-            return
+    let text = content.compactMap { block -> String? in
+        if (block["type"] as? String) == "text" {
+            return block["text"] as? String
         }
-        guard let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            completion(.failure(MonogramClaudeError(text: "Пустой или нечитаемый ответ")))
-            return
-        }
-        if let errorInfo = json["error"] as? [String: Any] {
-            completion(.failure(MonogramClaudeError(text: (errorInfo["message"] as? String) ?? "Неизвестная ошибка API")))
-            return
-        }
-        guard let content = json["content"] as? [[String: Any]] else {
-            completion(.failure(MonogramClaudeError(text: "В ответе нет текста")))
-            return
-        }
-        let text = content.compactMap { block -> String? in
-            if (block["type"] as? String) == "text" {
-                return block["text"] as? String
-            }
-            return nil
-        }.joined(separator: "\n")
-        if text.isEmpty {
-            completion(.failure(MonogramClaudeError(text: "Ответ пустой")))
-        } else {
-            completion(.success(text))
-        }
-    }.resume()
+        return nil
+    }.joined(separator: "\n")
+    if text.isEmpty {
+        completion(.failure(MonogramClaudeError(text: "Ответ пустой")))
+    } else {
+        completion(.success(text))
+    }
 }
 
 private struct MonogramClaudeError: Error {

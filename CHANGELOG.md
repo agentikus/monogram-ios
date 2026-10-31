@@ -90,3 +90,4 @@
 - Чат с Claude: свой ключ API, модель, усилие (MonogramClaudeController.swift, MonogramSettingsController.swift, MonogramSettings.swift).
 - Ghost: «Не показывать печатает» уже подавляет все виды активности (запись, загрузка файла); подпись уточнена.
 - Меню ID в профиле: «Копировать дату» заменено на «Скопировать ID» (PeerInfoScreenOpenMonogramId.swift).
+- Claude-чат: настоящее усилие через output_config.effort (low/medium/high) вместо длины ответа; max_tokens 16000, таймаут 300 с; повтор без effort при 400; обработка refusal (MonogramClaudeController.swift). Сверено со справочником Claude API.
