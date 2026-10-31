@@ -252,6 +252,15 @@ public final class MonogramSettings {
         }
     }
     
+    public var ignoreCopyProtection: Bool {
+        get {
+            return (defaults.object(forKey: "monogram_ignoreCopyProtection") as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: "monogram_ignoreCopyProtection")
+        }
+    }
+    
     public var hidePremiumStatuses: Bool {
         get {
             return (defaults.object(forKey: hidePremiumStatusesKey) as? Bool) ?? false
