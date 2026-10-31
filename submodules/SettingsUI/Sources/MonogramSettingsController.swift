@@ -41,6 +41,7 @@ private enum MonogramSettingsOption: Int32 {
     case semiTransparentDeleted
     case markReadAfterAction
     case useScheduled
+    case peekSelfDestructing
     case hidePremiumStatuses
     case filtersEnabled
     case openFilters
@@ -152,6 +153,7 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.toggle(101, .saveDeleted, "Сохранять удалённые сообщения", settings.saveDeletedMessages))
     entries.append(.toggle(102, .markEdited, "Сохранять исходный текст изменённых", settings.markEditedMessages))
     entries.append(.toggle(103, .saveSelfDestructing, "Сохранять медиа с таймером при открытии", settings.saveSelfDestructingMedia))
+    entries.append(.toggle(106, .peekSelfDestructing, "Смотреть одноразовые без сжигания", settings.peekSelfDestructing))
     entries.append(.toggle(105, .semiTransparentDeleted, "Полупрозрачные удалённые сообщения", settings.semiTransparentDeleted))
     entries.append(.choice(104, .cycleDeletedMark, "Метка удалённого сообщения", settings.deletedMark))
     entries.append(.journal(106, "Журнал удалённых и изменённых"))
@@ -236,6 +238,8 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.showMessageSeconds = value
         case .suggestGhostStory:
             settings.suggestGhostBeforeStory = value
+        case .peekSelfDestructing:
+            settings.peekSelfDestructing = value
         case .useScheduled:
             settings.useScheduledMessages = value
         case .hidePremiumStatuses:

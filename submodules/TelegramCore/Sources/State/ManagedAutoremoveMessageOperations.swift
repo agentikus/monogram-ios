@@ -91,7 +91,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                                 }
                                 var updatedMedia = currentMessage.media
-                                for i in 0 ..< updatedMedia.count {
+                                for i in 0 ..< (MonogramSettings.shared.saveSelfDestructingMedia ? 0 : updatedMedia.count) {
                                     if let _ = updatedMedia[i] as? TelegramMediaImage {
                                         updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
                                     } else if let file = updatedMedia[i] as? TelegramMediaFile {
