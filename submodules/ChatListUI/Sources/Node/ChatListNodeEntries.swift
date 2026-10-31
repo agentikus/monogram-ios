@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import MonogramAISettings
 import TelegramPresentationData
 import MergeLists
 import AccountContext
@@ -644,7 +643,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     var pinnedIndexOffset: UInt16 = 0
 
     var showMonogramClaude = false
-    if isMainTab && !view.hasLater && savedMessagesPeer == nil && MonogramAISettings.shared.showClaudeChat, case .chatList = mode {
+    if isMainTab && !view.hasLater && savedMessagesPeer == nil && MonogramSettings.shared.showClaudeChat, case .chatList = mode {
         showMonogramClaude = true
     }
 
