@@ -157,10 +157,6 @@ public final class SecretMediaPreviewController: ViewController {
     
     private let disposable = MetaDisposable()
     private let markMessageAsConsumedDisposable = MetaDisposable()
-    private var monogramBurnButton: UIButton?
-    private var monogramBurnAction: (() -> Void)?
-    private var monogramSaveButton: UIButton?
-    private var monogramSaveMessage: Message?
     
     private var controllerNode: SecretMediaPreviewControllerNode {
         return self.displayNode as! SecretMediaPreviewControllerNode
@@ -565,19 +561,13 @@ public final class SecretMediaPreviewController: ViewController {
                     }
                 }
                 if message.flags.contains(.Incoming) {
-                    self.monogramPresentSaveButton(message: message)
                     let monogramPeek = MonogramSettings.shared.peekSelfDestructing
                     monogramSaveSelfDestructingMedia(postbox: self.context.account.postbox, message: message, peerTitle: message.peers[message.id.peerId]?.debugDisplayTitle ?? "", completion: {
                         if !monogramPeek {
                             monogramConsume()
                         }
                     })
-                    if monogramPeek {
-                        self.monogramPresentBurnButton(onBurn: {
-                            MonogramSettings.shared.markBurned(monogramMessageId)
-                            monogramConsume()
-                        })
-                    } else {
+                    if !monogramPeek {
                         Queue.mainQueue().after(6.0, monogramConsume)
                     }
                 } else {
@@ -630,101 +620,6 @@ public final class SecretMediaPreviewController: ViewController {
             }
             self.currentMessageIsDismissed = true
         }
-    }
-    
-    private func monogramPresentBurnButton(onBurn: @escaping () -> Void) {
-        self.monogramBurnButton?.removeFromSuperview()
-        let button = UIButton(type: .system)
-        button.setTitle("🔥 Сжечь", for: .normal)
-        button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 17.0, weight: .semibold)
-        button.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
-        button.layer.cornerRadius = 22.0
-        button.translatesAutoresizingMaskIntoConstraints = false
-        self.monogramBurnAction = onBurn
-        button.addTarget(self, action: #selector(self.monogramBurnPressed), for: .touchUpInside)
-        let container = self.controllerNode.view
-        container.addSubview(button)
-        NSLayoutConstraint.activate([
-            button.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            button.bottomAnchor.constraint(equalTo: container.safeAreaLayoutGuide.bottomAnchor, constant: -150.0),
-            button.heightAnchor.constraint(equalToConstant: 44.0),
-            button.widthAnchor.constraint(equalToConstant: 150.0)
-        ])
-        self.monogramBurnButton = button
-    }
-    
-    private func monogramPresentSaveButton(message: Message) {
-        self.monogramSaveButton?.removeFromSuperview()
-        self.monogramSaveMessage = message
-        let button = UIButton(type: .system)
-        button.setTitle("💾 Сохранить в галерею", for: .normal)
-        button.setTitleColor(.white, for: .normal)
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 17.0, weight: .semibold)
-        button.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
-        button.layer.cornerRadius = 22.0
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, action: #selector(self.monogramSavePressed), for: .touchUpInside)
-        let container = self.controllerNode.view
-        container.addSubview(button)
-        NSLayoutConstraint.activate([
-            button.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            button.bottomAnchor.constraint(equalTo: container.safeAreaLayoutGuide.bottomAnchor, constant: -206.0),
-            button.heightAnchor.constraint(equalToConstant: 44.0),
-            button.widthAnchor.constraint(equalToConstant: 240.0)
-        ])
-        self.monogramSaveButton = button
-    }
-    
-    @objc private func monogramSavePressed() {
-        guard let message = self.monogramSaveMessage, let button = self.monogramSaveButton else {
-            return
-        }
-        var resource: MediaResource?
-        var isVideo = false
-        for media in message.media {
-            if let image = media as? TelegramMediaImage, let representation = largestImageRepresentation(image.representations) {
-                resource = representation.resource
-            } else if let file = media as? TelegramMediaFile {
-                resource = file.resource
-                isVideo = file.isVideo
-            }
-        }
-        guard let resource else {
-            return
-        }
-        button.setTitle("⏳ Сохраняю…", for: .normal)
-        let _ = (self.context.account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> filter { $0.complete }
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak button] data in
-            if isVideo {
-                let temporaryPath = NSTemporaryDirectory() + "monogram_\(UInt32.random(in: 0 ... UInt32.max)).mp4"
-                try? FileManager.default.removeItem(atPath: temporaryPath)
-                if (try? FileManager.default.copyItem(atPath: data.path, toPath: temporaryPath)) != nil {
-                    UISaveVideoAtPathToSavedPhotosAlbum(temporaryPath, nil, nil, nil)
-                    button?.setTitle("✅ Сохранено", for: .normal)
-                } else {
-                    button?.setTitle("❌ Не удалось", for: .normal)
-                }
-            } else if let image = UIImage(contentsOfFile: data.path) {
-                UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-                button?.setTitle("✅ Сохранено", for: .normal)
-            } else {
-                button?.setTitle("❌ Не удалось", for: .normal)
-            }
-        })
-    }
-    
-    @objc private func monogramBurnPressed() {
-        self.monogramBurnButton?.removeFromSuperview()
-        self.monogramBurnButton = nil
-        self.monogramSaveButton?.removeFromSuperview()
-        self.monogramSaveButton = nil
-        let action = self.monogramBurnAction
-        self.monogramBurnAction = nil
-        action?()
-        self.dismiss()
     }
     
     private func dismissAllTooltips() {
