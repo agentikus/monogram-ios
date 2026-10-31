@@ -3,6 +3,7 @@ import UIKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import MonogramAISettings
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -187,7 +188,7 @@ private enum MonogramClaudeEntry: ItemListNodeEntry {
 }
 
 private func monogramClaudeEntries(state: MonogramClaudeState) -> [MonogramClaudeEntry] {
-    let settings = MonogramSettings.shared
+    let settings = MonogramAISettings.shared
     var entries: [MonogramClaudeEntry] = []
 
     entries.append(.header(0, "ДИАЛОГ"))
@@ -218,8 +219,8 @@ private func monogramClaudeEntries(state: MonogramClaudeState) -> [MonogramClaud
         entries.append(.action(1004, "Очистить диалог", 1))
     }
 
-    let modelTitle = MonogramSettings.claudeModels.first(where: { $0.id == settings.claudeModel })?.title ?? settings.claudeModel
-    let effortTitle = MonogramSettings.claudeEfforts.first(where: { $0.id == settings.claudeEffort })?.title ?? settings.claudeEffort
+    let modelTitle = MonogramAISettings.claudeModels.first(where: { $0.id == settings.claudeModel })?.title ?? settings.claudeModel
+    let effortTitle = MonogramAISettings.claudeEfforts.first(where: { $0.id == settings.claudeEffort })?.title ?? settings.claudeEffort
     entries.append(.header(2000, "НАСТРОЙКИ"))
     entries.append(.key(2001, settings.claudeApiKey))
     entries.append(.choice(2002, "Модель", modelTitle, 0))
@@ -331,9 +332,9 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
     let arguments = MonogramClaudeArguments(updateInput: { value in
         state.input = value
     }, updateKey: { value in
-        MonogramSettings.shared.claudeApiKey = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        MonogramAISettings.shared.claudeApiKey = value.trimmingCharacters(in: .whitespacesAndNewlines)
     }, send: {
-        let settings = MonogramSettings.shared
+        let settings = MonogramAISettings.shared
         let image = state.pendingImage
         let rawText = state.input.trimmingCharacters(in: .whitespacesAndNewlines)
         if rawText.isEmpty && image == nil {
@@ -377,14 +378,14 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
             UIPasteboard.general.string = last.text
         }
     }, cycleModel: {
-        let settings = MonogramSettings.shared
-        let models = MonogramSettings.claudeModels
+        let settings = MonogramAISettings.shared
+        let models = MonogramAISettings.claudeModels
         let index = models.firstIndex(where: { $0.id == settings.claudeModel }) ?? 0
         settings.claudeModel = models[(index + 1) % models.count].id
         update()
     }, cycleEffort: {
-        let settings = MonogramSettings.shared
-        let efforts = MonogramSettings.claudeEfforts
+        let settings = MonogramAISettings.shared
+        let efforts = MonogramAISettings.claudeEfforts
         let index = efforts.firstIndex(where: { $0.id == settings.claudeEffort }) ?? 0
         settings.claudeEffort = efforts[(index + 1) % efforts.count].id
         update()
