@@ -34,3 +34,7 @@
 - Monogram settings screen (ghost mode, save deleted, keep original of edited)
 - Deleted-message mark in bubble timestamp (MonogramDeletedMessageAttribute)
 - App icon from MONOLITH DM logo (circular), backups in F:\Silentackup_20261031_1400
+
+## Stage 2 (2026-10-31)
+- Journal screen (deleted/edited/self-destructing media), edit-marker fix
+- Confirm voice/video before sending, disable ads, local premium, remove bubble tail, custom deleted mark, save TTL media on open

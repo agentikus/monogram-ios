@@ -257,6 +257,10 @@ extension ChatControllerImpl {
             updatedAction = .preview
         }
         
+        if case .send = action, MonogramSettings.shared.confirmVoiceAndVideo {
+            updatedAction = .preview
+        }
+        
         var sendImmediately = false
         if let _ = self.presentationInterfaceState.sendPaidMessageStars, case .send = action {
             updatedAction = .preview

@@ -140,7 +140,7 @@ public func messageBubbleArguments(maxCornerRadius: CGFloat, minCornerRadius: CG
         bottomLeftRadius = tmp
     }
     
-    return (topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, drawTail)
+    return (topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, drawTail && !MonogramSettings.shared.removeMessageTail)
 }
 
 public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, shadow: PresentationThemeBubbleShadow?, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false) -> UIImage {
@@ -223,7 +223,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         context.addLine(to: CGPoint(x: 0.0, y: topLeftRadius))
         context.fillPath()
         
-        if drawTail {
+        if drawTail && !MonogramSettings.shared.removeMessageTail {
             if maxCornerRadius >= minRadiusForFullTailCorner {
                 context.move(to: CGPoint(x: bottomEllipse.minX, y: bottomEllipse.midY))
                 context.addQuadCurve(to: CGPoint(x: bottomEllipse.midX, y: bottomEllipse.maxY), control: CGPoint(x: bottomEllipse.minX, y: bottomEllipse.maxY))
@@ -276,7 +276,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         context.closePath()
         context.strokePath()
         
-        if drawTail {
+        if drawTail && !MonogramSettings.shared.removeMessageTail {
             let outlineBottomEllipse = bottomEllipse.insetBy(dx: -borderOffset, dy: -borderOffset)
             let outlineInnerTopEllipse = topEllipse.insetBy(dx: borderOffset, dy: borderOffset)
             

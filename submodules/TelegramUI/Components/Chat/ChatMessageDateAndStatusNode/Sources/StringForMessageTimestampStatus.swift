@@ -184,7 +184,7 @@ public func stringForMessageTimestampStatus(
     
     for attribute in message.attributes {
         if attribute is MonogramDeletedMessageAttribute {
-            dateText = "🗑 удалено " + dateText
+            dateText = MonogramSettings.shared.deletedMark + " " + dateText
             break
         }
     }
