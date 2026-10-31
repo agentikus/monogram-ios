@@ -37,6 +37,7 @@ private enum MonogramSettingsOption: Int32 {
     case cycleEditedMark
     case silentInGhost
     case showSeconds
+    case messageDetails
 }
 
 private enum MonogramSettingsEntry: ItemListNodeEntry {
@@ -145,10 +146,11 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
 
     entries.append(.header(200, "ОФОРМЛЕНИЕ И ОТПРАВКА"))
     entries.append(.choice(202, .cycleEditedMark, "Метка изменённого сообщения", settings.editedMark))
+    entries.append(.toggle(206, .messageDetails, "Пункт «Детали сообщения» в меню", settings.showMessageDetails))
     entries.append(.toggle(203, .showSeconds, "Показывать секунды во времени сообщения", settings.showMessageSeconds))
     entries.append(.toggle(201, .removeTail, "Убрать хвостик у сообщений", settings.removeMessageTail))
     entries.append(.toggle(204, .confirmVoiceAndVideo, "Подтверждать голосовые и кружки", settings.confirmVoiceAndVideo))
-    entries.append(.footer(205, "После записи голосового или кружка открывается предпросмотр: можно прослушать, изменить или удалить запись и только потом отправить."))
+    entries.append(.footer(207, "После записи голосового или кружка открывается предпросмотр: можно прослушать, изменить или удалить запись и только потом отправить."))
 
     entries.append(.header(300, "ПРЕМИУМ И РЕКЛАМА"))
     entries.append(.toggle(301, .localPremium, "Локальный премиум", settings.localPremium))
@@ -199,6 +201,8 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.editedMark = presets[(currentIndex + 1) % presets.count]
         case .silentInGhost:
             settings.sendSilentInGhost = value
+        case .messageDetails:
+            settings.showMessageDetails = value
         case .showSeconds:
             settings.showMessageSeconds = value
         case .suggestGhostStory:
