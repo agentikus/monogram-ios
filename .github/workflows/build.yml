@@ -12,6 +12,9 @@ on:
 jobs:
   build:
     runs-on: macos-26
+    permissions:
+      contents: read
+      actions: write
 
     steps:
       - name: Checkout Repository
@@ -108,26 +111,29 @@ jobs:
           path: /Users/Shared/bazel-cache
           key: bazel-cache-${{ runner.os }}-x26-${{ github.run_id }}
 
-      - name: Upload Monogram IPA
+      - name: Encrypt IPA
+        env:
+          ARTIFACT_PASSWORD: ${{ secrets.ARTIFACT_PASSWORD }}
+        run: |
+          if [ -z "$ARTIFACT_PASSWORD" ]; then
+            echo "ARTIFACT_PASSWORD is not set, refusing to upload an unencrypted IPA"
+            exit 1
+          fi
+          openssl enc -aes-256-cbc -pbkdf2 -md sha256 -iter 200000 -salt -in /Users/Shared/telegram-ios/build/artifacts/Monogram.ipa -out /Users/Shared/telegram-ios/build/artifacts/Monogram.ipa.enc -pass env:ARTIFACT_PASSWORD
+          rm -f /Users/Shared/telegram-ios/build/artifacts/Monogram.ipa
+          ls -l /Users/Shared/telegram-ios/build/artifacts/
+
+      - name: Upload encrypted IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Monogram-IPA
-          path: /Users/Shared/telegram-ios/build/artifacts/Monogram.ipa
+          name: Monogram-IPA-enc
+          path: /Users/Shared/telegram-ios/build/artifacts/Monogram.ipa.enc
           if-no-files-found: error
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
-        with:
-          tag_name: v${{ env.APP_VERSION }}-${{ env.BUILD_NUMBER }}
-          name: Monogram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
-          body: |
-            Monogram for iOS ${{ env.APP_VERSION }} (Build ${{ env.BUILD_NUMBER }})
-            
-            - Features: Ghost Mode (Anonymous stories, offline status, hidden typing, disabled read receipts), Anti-Delete (retaining deleted messages), Anti-Edit (retaining original message history).
-            - Extensions stripped for AltStore / Sideloadly free Apple ID installation.
-            - Ready to install via AltStore / AltServer.
-          files: |
-            /Users/Shared/telegram-ios/build/artifacts/Monogram.ipa
+      - name: Delete older artifacts
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for id in $(gh api "repos/${{ github.repository }}/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.workflow_run.id != ${{ github.run_id }}) | .id'); do
+            gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" || true
+          done
