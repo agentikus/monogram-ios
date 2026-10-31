@@ -13,6 +13,15 @@ public final class MonogramSettings {
     private let markEditedMessagesKey = "monogram_markEditedMessages"
     private let confirmVoiceAndVideoKey = "monogram_confirmVoiceAndVideo"
     private let disableAdsKey = "monogram_disableAds"
+    private let hidePremiumStatusesKey = "monogram_hidePremiumStatuses"
+    private let useScheduledMessagesKey = "monogram_useScheduledMessages"
+    private let filtersEnabledKey = "monogram_filtersEnabled"
+    private let hideNotificationBadgeKey = "monogram_hideNotificationBadge"
+    private let hideNotificationCountersKey = "monogram_hideNotificationCounters"
+    private let hideAllChatsFolderKey = "monogram_hideAllChatsFolder"
+    private let streamerModeKey = "monogram_streamerMode"
+    private let showPeerIdKey = "monogram_showPeerId"
+    private let translationProviderKey = "monogram_translationProvider"
     private let semiTransparentDeletedKey = "monogram_semiTransparentDeleted"
     private let markReadAfterActionKey = "monogram_markReadAfterAction"
     private let showMessageDetailsKey = "monogram_showMessageDetails"
@@ -212,6 +221,89 @@ public final class MonogramSettings {
         }
         set {
             defaults.set(newValue, forKey: markReadAfterActionKey)
+        }
+    }
+    
+    public var hidePremiumStatuses: Bool {
+        get {
+            return (defaults.object(forKey: hidePremiumStatusesKey) as? Bool) ?? false
+        }
+        set {
+            defaults.set(newValue, forKey: hidePremiumStatusesKey)
+        }
+    }
+    
+    public var useScheduledMessages: Bool {
+        get {
+            return (defaults.object(forKey: useScheduledMessagesKey) as? Bool) ?? false
+        }
+        set {
+            defaults.set(newValue, forKey: useScheduledMessagesKey)
+        }
+    }
+    
+    public var filtersEnabled: Bool {
+        get {
+            return (defaults.object(forKey: filtersEnabledKey) as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: filtersEnabledKey)
+        }
+    }
+    
+    public var hideNotificationBadge: Bool {
+        get {
+            return (defaults.object(forKey: hideNotificationBadgeKey) as? Bool) ?? false
+        }
+        set {
+            defaults.set(newValue, forKey: hideNotificationBadgeKey)
+        }
+    }
+    
+    public var hideNotificationCounters: Bool {
+        get {
+            return (defaults.object(forKey: hideNotificationCountersKey) as? Bool) ?? false
+        }
+        set {
+            defaults.set(newValue, forKey: hideNotificationCountersKey)
+        }
+    }
+    
+    public var hideAllChatsFolder: Bool {
+        get {
+            return (defaults.object(forKey: hideAllChatsFolderKey) as? Bool) ?? false
+        }
+        set {
+            defaults.set(newValue, forKey: hideAllChatsFolderKey)
+        }
+    }
+    
+    public var streamerMode: Bool {
+        get {
+            return (defaults.object(forKey: streamerModeKey) as? Bool) ?? false
+        }
+        set {
+            defaults.set(newValue, forKey: streamerModeKey)
+        }
+    }
+    
+    public var showPeerId: Bool {
+        get {
+            return (defaults.object(forKey: showPeerIdKey) as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: showPeerIdKey)
+        }
+    }
+    
+    public static let translationProviders: [(id: String, title: String)] = [("telegram", "Telegram"), ("google", "Google")]
+    
+    public var translationProvider: String {
+        get {
+            return defaults.string(forKey: translationProviderKey) ?? "telegram"
+        }
+        set {
+            defaults.set(newValue, forKey: translationProviderKey)
         }
     }
     

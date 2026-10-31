@@ -154,6 +154,10 @@ func chatHistoryEntriesForView(
             continue
         }
         
+        if MonogramFilters.shared.shouldHide(message: message) {
+            continue
+        }
+        
         if case let .replyThread(replyThreadMessage) = location, replyThreadMessage.isForumPost {
             for media in message.media {
                 if let action = media as? TelegramMediaAction {

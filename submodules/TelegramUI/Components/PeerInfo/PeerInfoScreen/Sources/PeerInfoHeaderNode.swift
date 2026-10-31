@@ -1226,7 +1226,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             if title.isEmpty {
                 if case let .user(user) = peer, let phone = user.phone {
-                    title = formatPhoneNumber(context: self.context, number: phone)
+                    title = MonogramSettings.shared.streamerMode ? "+• ••• •••• ••••" : formatPhoneNumber(context: self.context, number: phone)
                 } else if let addressName = peer.addressName {
                     title = "@\(addressName)"
                 } else {
@@ -1239,7 +1239,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white, shadowColor: titleShadowColor)
             
             if self.isSettings, case let .user(user) = peer {
-                var subtitle = formatPhoneNumber(context: self.context, number: user.phone ?? "")
+                var subtitle = MonogramSettings.shared.streamerMode ? "+• ••• •••• ••••" : formatPhoneNumber(context: self.context, number: user.phone ?? "")
                 
                 if let mainUsername = user.addressName, !mainUsername.isEmpty {
                     subtitle = "\(subtitle) • @\(mainUsername)"
