@@ -4698,10 +4698,21 @@ func replayFinalState(
                     }
                     
                     var updatedText = message.text
-                    if MonogramSettings.shared.markEditedMessages && !previousMessage.text.isEmpty && previousMessage.text != message.text {
-                        if !previousMessage.text.contains("Было:") {
-                            updatedText = "\(message.text)\n\n[Было: \(previousMessage.text)]"
+                    let editMarker = "\n\n[Было: "
+                    var previousBaseText = previousMessage.text
+                    var originalText: String?
+                    if let markerRange = previousMessage.text.range(of: editMarker, options: .backwards), previousMessage.text.hasSuffix("]") {
+                        previousBaseText = String(previousMessage.text[previousMessage.text.startIndex ..< markerRange.lowerBound])
+                        originalText = String(previousMessage.text[markerRange.upperBound ..< previousMessage.text.index(before: previousMessage.text.endIndex)])
+                    }
+                    if !previousBaseText.isEmpty && previousBaseText != message.text {
+                        let peerTitle = transaction.getPeer(previousMessage.id.peerId)?.debugDisplayTitle ?? ""
+                        MonogramJournal.shared.add(MonogramJournalEntry(kind: .edited, peerId: previousMessage.id.peerId.toInt64(), namespace: previousMessage.id.namespace, id: previousMessage.id.id, date: Int32(Date().timeIntervalSince1970), peerTitle: peerTitle, text: message.text, oldText: previousBaseText))
+                        if MonogramSettings.shared.markEditedMessages {
+                            updatedText = "\(message.text)\(editMarker)\(originalText ?? previousBaseText)]"
                         }
+                    } else if originalText != nil {
+                        updatedText = previousMessage.text
                     }
 
                     return .update(message.withUpdatedText(updatedText).withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags).withUpdatedAttributes(updatedAttributes).withUpdatedMedia(updatedMedia))

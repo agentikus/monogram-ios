@@ -11,6 +11,12 @@ public final class MonogramSettings {
     private let sendReadStoriesKey = "monogram_sendReadStories"
     private let saveDeletedMessagesKey = "monogram_saveDeletedMessages"
     private let markEditedMessagesKey = "monogram_markEditedMessages"
+    private let confirmVoiceAndVideoKey = "monogram_confirmVoiceAndVideo"
+    private let disableAdsKey = "monogram_disableAds"
+    private let removeMessageTailKey = "monogram_removeMessageTail"
+    private let deletedMarkKey = "monogram_deletedMark"
+    private let saveSelfDestructingMediaKey = "monogram_saveSelfDestructingMedia"
+    private let localPremiumKey = "monogram_localPremium"
     
     private init() {}
     
@@ -65,6 +71,62 @@ public final class MonogramSettings {
         }
         set {
             defaults.set(newValue, forKey: markEditedMessagesKey)
+        }
+    }
+    
+    public var confirmVoiceAndVideo: Bool {
+        get {
+            return (defaults.object(forKey: confirmVoiceAndVideoKey) as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: confirmVoiceAndVideoKey)
+        }
+    }
+    
+    public var saveSelfDestructingMedia: Bool {
+        get {
+            return (defaults.object(forKey: saveSelfDestructingMediaKey) as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: saveSelfDestructingMediaKey)
+        }
+    }
+    
+    public static let deletedMarkPresets: [String] = ["🗑 удалено", "🗑", "удалено", "❌ удалено", "👻 удалено"]
+    
+    public var removeMessageTail: Bool {
+        get {
+            return (defaults.object(forKey: removeMessageTailKey) as? Bool) ?? false
+        }
+        set {
+            defaults.set(newValue, forKey: removeMessageTailKey)
+        }
+    }
+    
+    public var deletedMark: String {
+        get {
+            return defaults.string(forKey: deletedMarkKey) ?? MonogramSettings.deletedMarkPresets[0]
+        }
+        set {
+            defaults.set(newValue, forKey: deletedMarkKey)
+        }
+    }
+    
+    public var disableAds: Bool {
+        get {
+            return (defaults.object(forKey: disableAdsKey) as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: disableAdsKey)
+        }
+    }
+    
+    public var localPremium: Bool {
+        get {
+            return (defaults.object(forKey: localPremiumKey) as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: localPremiumKey)
         }
     }
     

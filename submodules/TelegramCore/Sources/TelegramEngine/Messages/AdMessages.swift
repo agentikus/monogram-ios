@@ -491,7 +491,7 @@ private class AdMessagesHistoryContextImpl {
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }
         |> mapToSignal { inputPeer -> Signal<(interPostInterval: Int32?, startDelay: Int32?, betweenDelay: Int32?, messages: [Message]), NoError> in
-            guard let inputPeer else {
+            guard let inputPeer, !MonogramSettings.shared.disableAds else {
                 return .single((nil, nil, nil, []))
             }
             var flags: Int32 = 0

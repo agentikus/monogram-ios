@@ -37,6 +37,12 @@ func markMessagesAsDeletedLocally(transaction: Transaction, ids: [MessageId]) {
                     return .skip
                 }
             }
+            var journalText = currentMessage.text
+            if journalText.isEmpty && !currentMessage.media.isEmpty {
+                journalText = "[медиа]"
+            }
+            let peerTitle = transaction.getPeer(currentMessage.id.peerId)?.debugDisplayTitle ?? ""
+            MonogramJournal.shared.add(MonogramJournalEntry(kind: .deleted, peerId: currentMessage.id.peerId.toInt64(), namespace: currentMessage.id.namespace, id: currentMessage.id.id, date: date, peerTitle: peerTitle, text: journalText, oldText: nil))
             var storeForwardInfo: StoreMessageForwardInfo?
             if let forwardInfo = currentMessage.forwardInfo {
                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
