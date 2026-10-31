@@ -38,6 +38,8 @@ private enum MonogramSettingsOption: Int32 {
     case silentInGhost
     case showSeconds
     case messageDetails
+    case semiTransparentDeleted
+    case markReadAfterAction
 }
 
 private enum MonogramSettingsEntry: ItemListNodeEntry {
@@ -132,17 +134,19 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.toggle(3, .hideTyping, "Не показывать «печатает…»", !settings.sendTyping))
     entries.append(.toggle(4, .hideReadMessages, "Не отмечать сообщения прочитанными", !settings.sendReadMessages))
     entries.append(.toggle(5, .hideReadStories, "Не отмечать истории просмотренными", !settings.sendReadStories))
+    entries.append(.toggle(8, .markReadAfterAction, "Отмечать прочитанным после моего ответа", settings.markReadAfterAction))
     entries.append(.toggle(7, .silentInGhost, "Отправлять без звука в режиме призрака", settings.sendSilentInGhost))
     entries.append(.toggle(6, .suggestGhostStory, "Предлагать призрака перед просмотром истории", settings.suggestGhostBeforeStory))
-    entries.append(.footer(8, "Собеседники не увидят, что вы онлайн, печатаете или прочитали сообщение. Ответ на сообщение или действие в чате может отправить отметку «прочитано»."))
+    entries.append(.footer(9, "Собеседники не увидят, что вы онлайн, печатаете или прочитали сообщение. Ответ на сообщение или действие в чате может отправить отметку «прочитано»."))
 
     entries.append(.header(100, "СООБЩЕНИЯ"))
     entries.append(.toggle(101, .saveDeleted, "Сохранять удалённые сообщения", settings.saveDeletedMessages))
     entries.append(.toggle(102, .markEdited, "Сохранять исходный текст изменённых", settings.markEditedMessages))
     entries.append(.toggle(103, .saveSelfDestructing, "Сохранять медиа с таймером при открытии", settings.saveSelfDestructingMedia))
+    entries.append(.toggle(105, .semiTransparentDeleted, "Полупрозрачные удалённые сообщения", settings.semiTransparentDeleted))
     entries.append(.choice(104, .cycleDeletedMark, "Метка удалённого сообщения", settings.deletedMark))
-    entries.append(.journal(105, "Журнал удалённых и изменённых"))
-    entries.append(.footer(106, "Удалённые сообщения остаются в чате и помечаются значком корзины. У изменённых сообщений внизу добавляется исходный текст в формате «[Было: …]»."))
+    entries.append(.journal(106, "Журнал удалённых и изменённых"))
+    entries.append(.footer(107, "Удалённые сообщения остаются в чате и помечаются значком корзины. У изменённых сообщений внизу добавляется исходный текст в формате «[Было: …]»."))
 
     entries.append(.header(200, "ОФОРМЛЕНИЕ И ОТПРАВКА"))
     entries.append(.choice(202, .cycleEditedMark, "Метка изменённого сообщения", settings.editedMark))
@@ -201,6 +205,10 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.editedMark = presets[(currentIndex + 1) % presets.count]
         case .silentInGhost:
             settings.sendSilentInGhost = value
+        case .semiTransparentDeleted:
+            settings.semiTransparentDeleted = value
+        case .markReadAfterAction:
+            settings.markReadAfterAction = value
         case .messageDetails:
             settings.showMessageDetails = value
         case .showSeconds:

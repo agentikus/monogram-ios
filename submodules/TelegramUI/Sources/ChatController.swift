@@ -9014,6 +9014,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
     func transformEnqueueMessages(_ messages: [EnqueueMessage], silentPosting: Bool, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, postpone: Bool = false) -> [EnqueueMessage] {
         let silentPosting = silentPosting || (MonogramSettings.shared.sendSilentInGhost && MonogramSettings.shared.isGhostModeActive)
+        if let peerId = self.chatLocation.peerId {
+            let _ = self.context.engine.messages.monogramMarkReadAfterAction(peerId: peerId).startStandalone()
+        }
         var defaultThreadId: Int64?
         var defaultReplyMessageSubject: EngineMessageReplySubject?
         switch self.chatLocation {

@@ -691,6 +691,11 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     
     open func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         self.item = item
+        
+        let targetAlpha: CGFloat = (item.message.isMonogramDeleted && MonogramSettings.shared.semiTransparentDeleted) ? 0.6 : 1.0
+        if self.alpha != targetAlpha {
+            self.alpha = targetAlpha
+        }
     }
     
     open func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
