@@ -1810,7 +1810,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 return
             }
             if case let .peer(monogramPeerData) = item.content, monogramPeerData.peer.peerId == monogramClaudePeerId {
-                gesture?.cancel()
+                gesture.cancel()
                 return
             }
             var threadId: Int64?
