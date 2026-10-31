@@ -40,6 +40,25 @@ public final class MonogramSettings {
     
     private init() {}
     
+    private var ownPeerIds = Set<Int64>()
+    
+    func registerOwnPeerId(_ peerId: Int64) {
+        self.readPushLock.lock()
+        self.ownPeerIds.insert(peerId)
+        self.readPushLock.unlock()
+    }
+    
+    func isLocalPremiumPeer(_ peerId: Int64) -> Bool {
+        if !self.localPremium {
+            return false
+        }
+        self.readPushLock.lock()
+        defer {
+            self.readPushLock.unlock()
+        }
+        return self.ownPeerIds.contains(peerId)
+    }
+    
     func setReadPushAllowed(_ peerId: Int64, _ allowed: Bool) {
         self.readPushLock.lock()
         if allowed {

@@ -1313,6 +1313,7 @@ public class Account {
     public let hiddenStorySubscriptionsContext: StorySubscriptionsContext?
     
     public init(accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool, isSupportUser: Bool) {
+        MonogramSettings.shared.registerOwnPeerId(peerId.toInt64())
         self.accountManager = accountManager
         self.id = id
         self.basePath = basePath
