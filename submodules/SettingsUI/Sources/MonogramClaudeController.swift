@@ -28,8 +28,9 @@ private final class MonogramClaudeArguments {
     let copyLast: () -> Void
     let cycleModel: () -> Void
     let cycleEffort: () -> Void
+    let cycleProvider: () -> Void
 
-    init(updateInput: @escaping (String) -> Void, updateKey: @escaping (String) -> Void, send: @escaping () -> Void, clear: @escaping () -> Void, copyLast: @escaping () -> Void, cycleModel: @escaping () -> Void, cycleEffort: @escaping () -> Void) {
+    init(updateInput: @escaping (String) -> Void, updateKey: @escaping (String) -> Void, send: @escaping () -> Void, clear: @escaping () -> Void, copyLast: @escaping () -> Void, cycleModel: @escaping () -> Void, cycleEffort: @escaping () -> Void, cycleProvider: @escaping () -> Void) {
         self.updateInput = updateInput
         self.updateKey = updateKey
         self.send = send
@@ -37,6 +38,7 @@ private final class MonogramClaudeArguments {
         self.copyLast = copyLast
         self.cycleModel = cycleModel
         self.cycleEffort = cycleEffort
+        self.cycleProvider = cycleProvider
     }
 }
 
@@ -123,12 +125,14 @@ private enum MonogramClaudeEntry: ItemListNodeEntry {
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: label, sectionId: self.section, style: .blocks, action: {
                 if tag == 0 {
                     arguments.cycleModel()
-                } else {
+                } else if tag == 1 {
                     arguments.cycleEffort()
+                } else {
+                    arguments.cycleProvider()
                 }
             })
         case let .key(_, text):
-            return ItemListSingleLineInputItem(presentationData: presentationData, systemStyle: .glass, title: NSAttributedString(string: "Ключ API"), text: text, placeholder: "sk-ant-…", type: .password, spacing: 10.0, sectionId: self.section, textUpdated: { value in
+            return ItemListSingleLineInputItem(presentationData: presentationData, systemStyle: .glass, title: NSAttributedString(string: "Ключ API"), text: text, placeholder: "ключ", type: .password, spacing: 10.0, sectionId: self.section, textUpdated: { value in
                 arguments.updateKey(value)
             }, action: {})
         }
@@ -162,15 +166,80 @@ private func monogramClaudeEntries(state: MonogramClaudeState) -> [MonogramClaud
         entries.append(.action(1003, "Очистить диалог", 1))
     }
 
-    let modelTitle = MonogramSettings.claudeModels.first(where: { $0.id == settings.claudeModel })?.title ?? settings.claudeModel
-    let effortTitle = MonogramSettings.claudeEfforts.first(where: { $0.id == settings.claudeEffort })?.title ?? settings.claudeEffort
+    let isGemini = settings.aiProvider == "gemini"
+    let providerTitle = MonogramSettings.aiProviders.first(where: { $0.id == settings.aiProvider })?.title ?? settings.aiProvider
     entries.append(.header(2000, "НАСТРОЙКИ"))
-    entries.append(.key(2001, settings.claudeApiKey))
-    entries.append(.choice(2002, "Модель", modelTitle, 0))
-    entries.append(.choice(2003, "Усилие", effortTitle, 1))
-    entries.append(.info(2004, "Ключ хранится только на этом устройстве и отправляется только на api.anthropic.com. Текст запросов оплачивается с вашего баланса Anthropic. «Усилие» — параметр effort API: чем выше, тем глубже рассуждение модели, дольше ответ и больше расход токенов."))
+    entries.append(.choice(2001, "Нейросеть", providerTitle, 2))
+    entries.append(.key(2002, isGemini ? settings.geminiApiKey : settings.claudeApiKey))
+    if isGemini {
+        let modelTitle = MonogramSettings.geminiModels.first(where: { $0.id == settings.geminiModel })?.title ?? settings.geminiModel
+        entries.append(.choice(2003, "Модель", modelTitle, 0))
+        entries.append(.info(2005, "Бесплатный ключ: Google AI Studio (aistudio.google.com) → Get API key. На бесплатном уровне есть лимиты запросов, и Google может использовать запросы для улучшения своих продуктов. Ключ хранится только на этом устройстве (Keychain) и отправляется только на generativelanguage.googleapis.com."))
+    } else {
+        let modelTitle = MonogramSettings.claudeModels.first(where: { $0.id == settings.claudeModel })?.title ?? settings.claudeModel
+        let effortTitle = MonogramSettings.claudeEfforts.first(where: { $0.id == settings.claudeEffort })?.title ?? settings.claudeEffort
+        entries.append(.choice(2003, "Модель", modelTitle, 0))
+        entries.append(.choice(2004, "Усилие", effortTitle, 1))
+        entries.append(.info(2005, "Ключ API Anthropic (console.anthropic.com), оплата по токенам; подписка Claude Pro не подходит. Ключ хранится только на этом устройстве (Keychain) и отправляется только на api.anthropic.com. «Усилие» — параметр effort API: чем выше, тем глубже рассуждение, дольше ответ и больше расход токенов."))
+    }
 
     return entries
+}
+
+private func monogramGeminiSend(apiKey: String, model: String, messages: [MonogramClaudeMessage], completion: @escaping (Result<String, MonogramClaudeError>) -> Void) {
+    guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent") else {
+        completion(.failure(MonogramClaudeError(text: "Неверный адрес API")))
+        return
+    }
+    let body: [String: Any] = [
+        "systemInstruction": ["parts": [["text": "Отвечай на языке пользователя."]]],
+        "contents": messages.map { ["role": $0.role == "assistant" ? "model" : "user", "parts": [["text": $0.text]]] }
+    ]
+    guard let data = try? JSONSerialization.data(withJSONObject: body) else {
+        completion(.failure(MonogramClaudeError(text: "Не удалось собрать запрос")))
+        return
+    }
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.timeoutInterval = 300.0
+    request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
+    request.setValue("application/json", forHTTPHeaderField: "content-type")
+    request.httpBody = data
+
+    URLSession.shared.dataTask(with: request) { data, _, error in
+        if let error = error {
+            completion(.failure(MonogramClaudeError(text: error.localizedDescription)))
+            return
+        }
+        guard let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            completion(.failure(MonogramClaudeError(text: "Пустой или нечитаемый ответ")))
+            return
+        }
+        if let errorInfo = json["error"] as? [String: Any] {
+            completion(.failure(MonogramClaudeError(text: (errorInfo["message"] as? String) ?? "Неизвестная ошибка API")))
+            return
+        }
+        if let feedback = json["promptFeedback"] as? [String: Any], let reason = feedback["blockReason"] as? String {
+            completion(.failure(MonogramClaudeError(text: "Запрос заблокирован: \(reason)")))
+            return
+        }
+        guard let candidates = json["candidates"] as? [[String: Any]], let content = candidates.first?["content"] as? [String: Any], let parts = content["parts"] as? [[String: Any]] else {
+            completion(.failure(MonogramClaudeError(text: "В ответе нет текста")))
+            return
+        }
+        let text = parts.compactMap { part -> String? in
+            if (part["thought"] as? Bool) == true {
+                return nil
+            }
+            return part["text"] as? String
+        }.joined(separator: "
+")
+        if text.isEmpty {
+            completion(.failure(MonogramClaudeError(text: "Ответ пустой")))
+        } else {
+            completion(.success(text))
+        }
+    }.resume()
 }
 
 private func monogramClaudeSend(apiKey: String, model: String, effort: String, messages: [MonogramClaudeMessage], completion: @escaping (Result<String, MonogramClaudeError>) -> Void) {
@@ -266,14 +335,21 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
     let arguments = MonogramClaudeArguments(updateInput: { value in
         state.input = value
     }, updateKey: { value in
-        MonogramSettings.shared.claudeApiKey = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if MonogramSettings.shared.aiProvider == "gemini" {
+            MonogramSettings.shared.geminiApiKey = trimmed
+        } else {
+            MonogramSettings.shared.claudeApiKey = trimmed
+        }
     }, send: {
         let settings = MonogramSettings.shared
         let text = state.input.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty {
             return
         }
-        if settings.claudeApiKey.isEmpty {
+        let isGemini = settings.aiProvider == "gemini"
+        let apiKey = isGemini ? settings.geminiApiKey : settings.claudeApiKey
+        if apiKey.isEmpty {
             state.error = "введите ключ API в настройках ниже"
             update()
             return
@@ -283,7 +359,7 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
         state.input = ""
         state.isLoading = true
         update()
-        monogramClaudeSend(apiKey: settings.claudeApiKey, model: settings.claudeModel, effort: settings.claudeEffort, messages: state.messages, completion: { result in
+        let completion: (Result<String, MonogramClaudeError>) -> Void = { result in
             Queue.mainQueue().async {
                 state.isLoading = false
                 switch result {
@@ -296,7 +372,12 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
                 }
                 update()
             }
-        })
+        }
+        if isGemini {
+            monogramGeminiSend(apiKey: apiKey, model: settings.geminiModel, messages: state.messages, completion: completion)
+        } else {
+            monogramClaudeSend(apiKey: apiKey, model: settings.claudeModel, effort: settings.claudeEffort, messages: state.messages, completion: completion)
+        }
     }, clear: {
         state.messages = []
         state.error = nil
@@ -307,15 +388,27 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
         }
     }, cycleModel: {
         let settings = MonogramSettings.shared
-        let models = MonogramSettings.claudeModels
-        let index = models.firstIndex(where: { $0.id == settings.claudeModel }) ?? 0
-        settings.claudeModel = models[(index + 1) % models.count].id
+        if settings.aiProvider == "gemini" {
+            let models = MonogramSettings.geminiModels
+            let index = models.firstIndex(where: { $0.id == settings.geminiModel }) ?? 0
+            settings.geminiModel = models[(index + 1) % models.count].id
+        } else {
+            let models = MonogramSettings.claudeModels
+            let index = models.firstIndex(where: { $0.id == settings.claudeModel }) ?? 0
+            settings.claudeModel = models[(index + 1) % models.count].id
+        }
         update()
     }, cycleEffort: {
         let settings = MonogramSettings.shared
         let efforts = MonogramSettings.claudeEfforts
         let index = efforts.firstIndex(where: { $0.id == settings.claudeEffort }) ?? 0
         settings.claudeEffort = efforts[(index + 1) % efforts.count].id
+        update()
+    }, cycleProvider: {
+        let settings = MonogramSettings.shared
+        let providers = MonogramSettings.aiProviders
+        let index = providers.firstIndex(where: { $0.id == settings.aiProvider }) ?? 0
+        settings.aiProvider = providers[(index + 1) % providers.count].id
         update()
     })
 
@@ -324,7 +417,7 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
         refresh.get()
     )
     |> map { presentationData, _ -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Claude"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("ИИ"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: monogramClaudeEntries(state: state), style: .blocks, animateChanges: false)
         return (controllerState, (listState, arguments))
     }
