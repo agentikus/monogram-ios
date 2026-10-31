@@ -297,6 +297,10 @@ NSObject * _Nullable makeColorMatrixFilter() {
 static const void *layerDisableScreenshotsKey = &layerDisableScreenshotsKey;
 
 void setLayerDisableScreenshots(CALayer * _Nonnull layer, bool disableScreenshots) {
+    id monogramIgnore = [[NSUserDefaults standardUserDefaults] objectForKey:@"monogram_ignoreCopyProtection"];
+    if (monogramIgnore == nil || [monogramIgnore boolValue]) {
+        disableScreenshots = false;
+    }
     static UITextField *textField = nil;
     static UIView *secureView = nil;
     static dispatch_once_t onceToken;

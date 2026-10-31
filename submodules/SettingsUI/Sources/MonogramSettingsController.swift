@@ -74,6 +74,7 @@ private enum MonogramSettingsOption: Int32 {
     case streamerMode
     case showPeerId
     case ignoreCopyProtection
+    case hideScreenshotNotifications
     case cycleTranslation
 }
 
@@ -208,12 +209,13 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.toggle(402, .filtersEnabled, "Фильтры сообщений", settings.filtersEnabled))
     entries.append(.choice(403, .openFilters, "Список фильтров", "\(MonogramFilters.shared.filters.count)"))
     entries.append(.toggle(409, .ignoreCopyProtection, "Сохранять из защищённых чатов", settings.ignoreCopyProtection))
+    entries.append(.toggle(410, .hideScreenshotNotifications, "Не сообщать о скриншотах", settings.hideScreenshotNotifications))
     entries.append(.toggle(404, .showPeerId, "Показывать ID в профиле", settings.showPeerId))
     entries.append(.toggle(405, .streamerMode, "Режим стримера (скрыть номер)", settings.streamerMode))
     entries.append(.toggle(406, .hideBadge, "Скрыть значок на иконке приложения", settings.hideNotificationBadge))
     entries.append(.toggle(407, .hideCounters, "Скрыть счётчики непрочитанных в чатах", settings.hideNotificationCounters))
     entries.append(.choice(408, .cycleTranslation, "Переводчик", MonogramSettings.translationProviders.first(where: { $0.0 == settings.translationProvider })?.1 ?? settings.translationProvider))
-    entries.append(.footer(410, "Запланированная отправка: в режиме призрака сообщения уходят как запланированные через ~12 секунд, чтобы не отмечать вас онлайн. Фильтры скрывают входящие сообщения с указанным текстом; регулярные выражения пишутся в виде /шаблон/. Часть изменений применяется после перезапуска. «Сохранять из защищённых чатов» снимает запрет на копирование и сохранение медиа в группах и секретных чатах; пересылка запрещена самим сервером."))
+    entries.append(.footer(411, "Запланированная отправка: в режиме призрака сообщения уходят как запланированные через ~12 секунд, чтобы не отмечать вас онлайн. Фильтры скрывают входящие сообщения с указанным текстом; регулярные выражения пишутся в виде /шаблон/. Часть изменений применяется после перезапуска. «Сохранять из защищённых чатов» снимает запрет на копирование и сохранение медиа в группах и секретных чатах; пересылка запрещена самим сервером."))
 
     return entries
 }
@@ -299,6 +301,8 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.showPeerId = value
         case .ignoreCopyProtection:
             settings.ignoreCopyProtection = value
+        case .hideScreenshotNotifications:
+            settings.hideScreenshotNotifications = value
         case .cycleTranslation:
             let providers = MonogramSettings.translationProviders
             let currentIndex = providers.firstIndex(where: { $0.0 == settings.translationProvider }) ?? 0

@@ -252,6 +252,15 @@ public final class MonogramSettings {
         }
     }
     
+    public var hideScreenshotNotifications: Bool {
+        get {
+            return (defaults.object(forKey: "monogram_hideScreenshotNotifications") as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: "monogram_hideScreenshotNotifications")
+        }
+    }
+    
     public var ignoreCopyProtection: Bool {
         get {
             return (defaults.object(forKey: "monogram_ignoreCopyProtection") as? Bool) ?? true
