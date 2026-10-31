@@ -249,8 +249,7 @@ private func monogramClaudeSend(apiKey: String, model: String, effort: String, m
                     ["type": "text", "text": message.text]
                 ]]
             }
-            return ["role": message.role, "content": message.imageBase64 != nil ? "[фото отправлено ранее]
-" + message.text : message.text]
+            return ["role": message.role, "content": message.imageBase64 != nil ? "[фото отправлено ранее]\n" + message.text : message.text]
         }
     ]
     var didRetryWithoutEffort = false

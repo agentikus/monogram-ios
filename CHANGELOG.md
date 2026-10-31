@@ -94,3 +94,4 @@
 - Ключ Claude API перенесён в Keychain (kSecAttrAccessibleWhenUnlockedThisDeviceOnly), старое значение из UserDefaults мигрирует при первом чтении (MonogramSettings.swift).
 - Откат: Gemini-провайдер убран (по просьбе пользователя), остался только Claude (коммит e9507a3b49).
 - ИИ-чат: отправка фото (выбор из галереи, сжатие до 1568 px JPEG, base64 в блоке image; фото уходит только в последнем сообщении, в истории — пометка) (MonogramClaudeController.swift).
+- Исправлена ошибка компиляции (незакрытая строка с переводом строки) в MonogramClaudeController.swift:252.
