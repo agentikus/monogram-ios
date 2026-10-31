@@ -51,3 +51,5 @@
 - Icon: whole artwork fits inside the circle. Local premium: own account reports isPremium everywhere (Peer.isPremium), not only in AccountContext.
 
 - Icon: square artwork, MONOLITH DM text replaced by MONOGRAM (no circle).
+
+- Icon text uses the original 28 Days Later font.
