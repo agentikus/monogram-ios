@@ -61,6 +61,10 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         displaySetStatus = false
     }
     
+    items[.edit]!.append(PeerInfoScreenSwitchItem(id: 10, text: "Режим призрака", value: MonogramSettings.shared.isGhostModeActive, icon: PresentationResourcesSettings.premium, toggled: { value in
+        MonogramSettings.shared.isGhostModeActive = value
+    }))
+    
     if displaySetStatus {
         items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: setStatusTitle, icon: UIImage(bundleImageName: hasEmojiStatus ? "Settings/EditEmojiStatus" : "Settings/SetEmojiStatus"), action: {
             interaction.openSettings(.emojiStatus)

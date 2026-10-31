@@ -125,6 +125,8 @@
 	<string>We need this so that you can share photos and videos from your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need this so that you can share photos and videos from your photo library.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>We need this to transcribe voice messages on your device.</string>
 	<key>NSSiriUsageDescription</key>
 	<string>You can use Siri to send messages.</string>
 	<key>NSUserActivityTypes</key>

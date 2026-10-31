@@ -197,7 +197,7 @@ public func stringForMessageTimestampStatus(
     }
     for attribute in message.attributes {
         if attribute is MonogramBurnedMessageAttribute {
-            dateText = "🔥 уничтожено " + dateText
+            dateText = MonogramSettings.shared.burnedMark + " " + dateText
             break
         }
     }

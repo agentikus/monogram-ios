@@ -58,6 +58,7 @@ private enum MonogramSettingsOption: Int32 {
     case suggestGhostStory
     case disableStories
     case cycleEditedMark
+    case cycleBurnedMark
     case silentInGhost
     case showSeconds
     case messageDetails
@@ -75,6 +76,7 @@ private enum MonogramSettingsOption: Int32 {
     case showPeerId
     case ignoreCopyProtection
     case hideScreenshotNotifications
+    case localTranscription
     case cycleTranslation
 }
 
@@ -187,6 +189,7 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
 
     entries.append(.header(200, "ОФОРМЛЕНИЕ И ОТПРАВКА"))
     entries.append(.choice(202, .cycleEditedMark, "Метка изменённого сообщения", settings.editedMark))
+    entries.append(.choice(207, .cycleBurnedMark, "Метка сожжённого сообщения", settings.burnedMark))
     entries.append(.toggle(206, .messageDetails, "Пункт «Детали сообщения» в меню", settings.showMessageDetails))
     entries.append(.toggle(203, .showSeconds, "Показывать секунды во времени сообщения", settings.showMessageSeconds))
     entries.append(.toggle(201, .removeTail, "Убрать хвостик у сообщений", settings.removeMessageTail))
@@ -210,6 +213,7 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.choice(403, .openFilters, "Список фильтров", "\(MonogramFilters.shared.filters.count)"))
     entries.append(.toggle(409, .ignoreCopyProtection, "Сохранять из защищённых чатов", settings.ignoreCopyProtection))
     entries.append(.toggle(410, .hideScreenshotNotifications, "Не сообщать о скриншотах", settings.hideScreenshotNotifications))
+    entries.append(.toggle(412, .localTranscription, "Расшифровка голосовых на устройстве", settings.localTranscription))
     entries.append(.toggle(404, .showPeerId, "Показывать ID в профиле", settings.showPeerId))
     entries.append(.toggle(405, .streamerMode, "Режим стримера (скрыть номер)", settings.streamerMode))
     entries.append(.toggle(406, .hideBadge, "Скрыть значок на иконке приложения", settings.hideNotificationBadge))
@@ -254,6 +258,10 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.removeMessageTail = value
         case .disableStories:
             settings.disableStories = value
+        case .cycleBurnedMark:
+            let presets = MonogramSettings.burnedMarkPresets
+            let currentIndex = presets.firstIndex(of: settings.burnedMark) ?? 0
+            settings.burnedMark = presets[(currentIndex + 1) % presets.count]
         case .cycleEditedMark:
             let presets = MonogramSettings.editedMarkPresets
             let currentIndex = presets.firstIndex(of: settings.editedMark) ?? 0
@@ -303,6 +311,8 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.ignoreCopyProtection = value
         case .hideScreenshotNotifications:
             settings.hideScreenshotNotifications = value
+        case .localTranscription:
+            settings.localTranscription = value
         case .cycleTranslation:
             let providers = MonogramSettings.translationProviders
             let currentIndex = providers.firstIndex(where: { $0.0 == settings.translationProvider }) ?? 0
