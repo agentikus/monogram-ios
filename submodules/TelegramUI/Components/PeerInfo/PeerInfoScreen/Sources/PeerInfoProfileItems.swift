@@ -192,9 +192,11 @@ func infoItems(
         }
         if MonogramSettings.shared.showPeerId {
             let monogramPeerIdText = "\(user.id.id._internalGetInt64Value())"
-            items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemMonogramPeerId, label: "ID", text: monogramPeerIdText, textColor: .primary, action: { _, _ in
-                UIPasteboard.general.string = monogramPeerIdText
-            }, longTapAction: nil, requestLayout: { animated in
+            items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemMonogramPeerId, label: "ID", text: monogramPeerIdText, textColor: .primary, action: { node, _ in
+                interaction.openMonogramIdContextMenu(node, nil, monogramPeerIdText)
+            }, longTapAction: nil, contextAction: { node, gesture, _ in
+                interaction.openMonogramIdContextMenu(node, gesture, monogramPeerIdText)
+            }, requestLayout: { animated in
                 interaction.requestLayout(animated)
             }))
         }
