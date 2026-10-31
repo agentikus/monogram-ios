@@ -1562,10 +1562,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             var monogramIsVideo = false
             for media in message.effectiveMedia {
                 if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
-                    monogramMediaReference = ImageMediaReference.standalone(media: image).abstract
+                    monogramMediaReference = .message(message: MessageReference(message), media: image)
                     break
                 } else if let file = media as? TelegramMediaFile, file.isVideo {
-                    monogramMediaReference = FileMediaReference.standalone(media: file).abstract
+                    monogramMediaReference = .message(message: MessageReference(message), media: file)
                     monogramIsVideo = true
                     break
                 }
@@ -1588,8 +1588,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             actions.append(.action(ContextMenuActionItem(text: "🔥 Сжечь", textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { _, f in
-                MonogramSettings.shared.markBurned(monogramMessageId)
-                let _ = context.engine.messages.markMessageContentAsConsumedInteractively(messageId: monogramMessageId).startStandalone()
+                let _ = monogramBurnMessage(account: context.account, messageId: monogramMessageId).startStandalone()
                 f(.default)
             })))
         }
