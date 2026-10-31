@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import Postbox
 
 public final class MonogramSettings {
@@ -324,9 +325,41 @@ public final class MonogramSettings {
         set { self.defaults.set(newValue, forKey: "monogram_filterZalgo") }
     }
 
+    private func keychainQuery() -> [String: Any] {
+        return [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "monogram.claude",
+            kSecAttrAccount as String: "apiKey"
+        ]
+    }
+
+    /// Хранится в Keychain (только на этом устройстве). Старое значение из UserDefaults переносится при первом чтении.
     public var claudeApiKey: String {
-        get { return self.defaults.string(forKey: "monogram_claudeApiKey") ?? "" }
-        set { self.defaults.set(newValue, forKey: "monogram_claudeApiKey") }
+        get {
+            var query = self.keychainQuery()
+            query[kSecReturnData as String] = true
+            query[kSecMatchLimit as String] = kSecMatchLimitOne
+            var result: AnyObject?
+            if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess, let data = result as? Data, let value = String(data: data, encoding: .utf8) {
+                return value
+            }
+            if let legacy = self.defaults.string(forKey: "monogram_claudeApiKey"), !legacy.isEmpty {
+                self.claudeApiKey = legacy
+                self.defaults.removeObject(forKey: "monogram_claudeApiKey")
+                return legacy
+            }
+            return ""
+        }
+        set {
+            SecItemDelete(self.keychainQuery() as CFDictionary)
+            if newValue.isEmpty {
+                return
+            }
+            var attributes = self.keychainQuery()
+            attributes[kSecValueData as String] = Data(newValue.utf8)
+            attributes[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            SecItemAdd(attributes as CFDictionary, nil)
+        }
     }
 
     public static let claudeModels: [(id: String, title: String)] = [
