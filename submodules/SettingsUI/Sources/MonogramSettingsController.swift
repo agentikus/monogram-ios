@@ -32,6 +32,7 @@ private enum MonogramSettingsOption: Int32 {
     case saveSelfDestructing
     case removeTail
     case cycleDeletedMark
+    case suggestGhostStory
 }
 
 private enum MonogramSettingsEntry: ItemListNodeEntry {
@@ -126,7 +127,8 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.toggle(3, .hideTyping, "Не показывать «печатает…»", !settings.sendTyping))
     entries.append(.toggle(4, .hideReadMessages, "Не отмечать сообщения прочитанными", !settings.sendReadMessages))
     entries.append(.toggle(5, .hideReadStories, "Не отмечать истории просмотренными", !settings.sendReadStories))
-    entries.append(.footer(6, "Собеседники не увидят, что вы онлайн, печатаете или прочитали сообщение. Ответ на сообщение или действие в чате может отправить отметку «прочитано»."))
+    entries.append(.toggle(6, .suggestGhostStory, "Предлагать призрака перед просмотром истории", settings.suggestGhostBeforeStory))
+    entries.append(.footer(7, "Собеседники не увидят, что вы онлайн, печатаете или прочитали сообщение. Ответ на сообщение или действие в чате может отправить отметку «прочитано»."))
 
     entries.append(.header(100, "СООБЩЕНИЯ"))
     entries.append(.toggle(101, .saveDeleted, "Сохранять удалённые сообщения", settings.saveDeletedMessages))
@@ -181,6 +183,8 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.saveSelfDestructingMedia = value
         case .removeTail:
             settings.removeMessageTail = value
+        case .suggestGhostStory:
+            settings.suggestGhostBeforeStory = value
         case .cycleDeletedMark:
             let presets = MonogramSettings.deletedMarkPresets
             let currentIndex = presets.firstIndex(of: settings.deletedMark) ?? 0

@@ -13,6 +13,7 @@ public final class MonogramSettings {
     private let markEditedMessagesKey = "monogram_markEditedMessages"
     private let confirmVoiceAndVideoKey = "monogram_confirmVoiceAndVideo"
     private let disableAdsKey = "monogram_disableAds"
+    private let suggestGhostBeforeStoryKey = "monogram_suggestGhostBeforeStory"
     private let removeMessageTailKey = "monogram_removeMessageTail"
     private let deletedMarkKey = "monogram_deletedMark"
     private let saveSelfDestructingMediaKey = "monogram_saveSelfDestructingMedia"
@@ -109,6 +110,15 @@ public final class MonogramSettings {
         }
         set {
             defaults.set(newValue, forKey: deletedMarkKey)
+        }
+    }
+    
+    public var suggestGhostBeforeStory: Bool {
+        get {
+            return (defaults.object(forKey: suggestGhostBeforeStoryKey) as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: suggestGhostBeforeStoryKey)
         }
     }
     
