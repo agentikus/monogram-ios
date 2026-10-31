@@ -12,6 +12,12 @@ private enum FetchError {
 @available(iOS 10.0, *)
 private func fetchRawData(prefix: String) -> Signal<Data, FetchError> {
     return Signal { subscriber in
+        // Sideloaded builds are signed without the iCloud entitlement, and CKContainer.default() traps without it.
+        let isCloudKitAvailable = false
+        if !isCloudKitAvailable {
+            subscriber.putError(.generic)
+            return EmptyDisposable
+        }
         let container = CKContainer.default()
         let publicDatabase = container.database(with: .public)
         let recordId = CKRecord.ID(recordName: "emergency-datacenter-\(prefix)")
