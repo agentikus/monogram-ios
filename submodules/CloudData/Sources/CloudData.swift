@@ -12,9 +12,9 @@ private enum FetchError {
 @available(iOS 10.0, *)
 private func fetchRawData(prefix: String) -> Signal<Data, FetchError> {
     // Sideloaded builds are signed without the iCloud entitlement, and CKContainer.default() traps without it,
-    // so the CloudKit emergency datacenter lookup is disabled.
-    return Signal { subscriber in
-        subscriber.putError(.generic)
+    // so the CloudKit emergency datacenter lookup is disabled. The signal must never fail or complete synchronously:
+    // the caller wraps it in `restart`, which would resubscribe in an endless recursion and overflow the stack.
+    return Signal { _ in
         return EmptyDisposable
     }
 }
