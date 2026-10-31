@@ -1007,6 +1007,19 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 icons.append(PresentationAppIcon(name: "Premium", imageName: "Premium", isPremium: true))
                 icons.append(PresentationAppIcon(name: "PremiumTurbo", imageName: "PremiumTurbo", isPremium: true))
                 icons.append(PresentationAppIcon(name: "PremiumBlack", imageName: "PremiumBlack", isPremium: true))
+                icons.append(PresentationAppIcon(name: "MonogramIcon", imageName: "MonogramIcon"))
+                icons.append(PresentationAppIcon(name: "AyuDefault", imageName: "AyuDefault"))
+                icons.append(PresentationAppIcon(name: "AyuAlt", imageName: "AyuAlt"))
+                icons.append(PresentationAppIcon(name: "AyuBard", imageName: "AyuBard"))
+                icons.append(PresentationAppIcon(name: "AyuChibi", imageName: "AyuChibi"))
+                icons.append(PresentationAppIcon(name: "AyuChibi2", imageName: "AyuChibi2"))
+                icons.append(PresentationAppIcon(name: "AyuDiscord", imageName: "AyuDiscord"))
+                icons.append(PresentationAppIcon(name: "AyuExtera", imageName: "AyuExtera"))
+                icons.append(PresentationAppIcon(name: "AyuExtera2", imageName: "AyuExtera2"))
+                icons.append(PresentationAppIcon(name: "AyuNothing", imageName: "AyuNothing"))
+                icons.append(PresentationAppIcon(name: "AyuSpotify", imageName: "AyuSpotify"))
+                icons.append(PresentationAppIcon(name: "AyuWin95", imageName: "AyuWin95"))
+                icons.append(PresentationAppIcon(name: "AyuYaPlus", imageName: "AyuYaPlus"))
                 
                 return icons
             } else {

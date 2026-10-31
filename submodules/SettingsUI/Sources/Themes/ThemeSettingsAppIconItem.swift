@@ -402,6 +402,32 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     name = item.strings.Appearance_AppIconBlack
                                 case "PremiumTurbo":
                                     name = item.strings.Appearance_AppIconTurbo
+                                case "MonogramIcon":
+                                    name = "Monogram"
+                                case "AyuDefault":
+                                    name = "Ayu"
+                                case "AyuAlt":
+                                    name = "Ayu Alt"
+                                case "AyuBard":
+                                    name = "Ayu Bard"
+                                case "AyuChibi":
+                                    name = "Ayu Chibi"
+                                case "AyuChibi2":
+                                    name = "Ayu Chibi 2"
+                                case "AyuDiscord":
+                                    name = "Ayu Discord"
+                                case "AyuExtera":
+                                    name = "Ayu Extera"
+                                case "AyuExtera2":
+                                    name = "Ayu Extera 2"
+                                case "AyuNothing":
+                                    name = "Ayu Nothing"
+                                case "AyuSpotify":
+                                    name = "Ayu Spotify"
+                                case "AyuWin95":
+                                    name = "Ayu Win95"
+                                case "AyuYaPlus":
+                                    name = "Ayu Я+"
                                 default:
                                     name = icon.name
                             }
