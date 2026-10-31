@@ -84,6 +84,8 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
                     if let message = transaction.getMessage(entry.messageId) {
                         if message.id.peerId.namespace == Namespaces.Peer.SecretChat || isRemove {
                             _internal_deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
+                        } else if MonogramSettings.shared.keepsSelfDestructingMedia(message.id) {
+                            transaction.clearTimestampBasedAttribute(id: entry.messageId, tag: tag)
                         } else {
                             transaction.updateMessage(message.id, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
