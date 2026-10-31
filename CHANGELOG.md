@@ -47,3 +47,5 @@
 - Fix: view-once/TTL media now saved from the viewer before consume (copy completes, then consume; 6s fallback).
 
 - Self-destructing media: viewing without burning (Burn button sends the read receipt), media is kept in chat instead of "expired" placeholder.
+
+- Icon: whole artwork fits inside the circle. Local premium: own account reports isPremium everywhere (Peer.isPremium), not only in AccountContext.
