@@ -33,8 +33,9 @@ private func monogramFileExtension(for file: TelegramMediaFile) -> String {
     }
 }
 
-func monogramSaveSelfDestructingMedia(postbox: Postbox, message: Message, peerTitle: String) {
+public func monogramSaveSelfDestructingMedia(postbox: Postbox, message: Message, peerTitle: String, completion: @escaping () -> Void = {}) {
     guard MonogramSettings.shared.saveSelfDestructingMedia else {
+        completion()
         return
     }
     var hasTimer = false
@@ -45,6 +46,7 @@ func monogramSaveSelfDestructingMedia(postbox: Postbox, message: Message, peerTi
         }
     }
     if !hasTimer {
+        completion()
         return
     }
     
@@ -52,6 +54,16 @@ func monogramSaveSelfDestructingMedia(postbox: Postbox, message: Message, peerTi
     let messageId = message.id
     let date = Int32(Date().timeIntervalSince1970)
     
+    var pending = 0
+    var finished = false
+    let finish: () -> Void = {
+        if !finished {
+            finished = true
+            completion()
+        }
+    }
+    let lock = NSLock()
+    var items: [(MediaResource, String, String)] = []
     for media in message.media {
         var resource: MediaResource?
         var pathExtension = "jpg"
@@ -63,15 +75,31 @@ func monogramSaveSelfDestructingMedia(postbox: Postbox, message: Message, peerTi
             pathExtension = monogramFileExtension(for: file)
             kindText = file.isVideo ? "[одноразовое видео]" : "[одноразовый файл]"
         }
-        guard let resource else {
-            continue
+        if let resource {
+            items.append((resource, pathExtension, kindText))
         }
-        let destination = monogramSavedMediaDirectory().appendingPathComponent("\(peerId.toInt64())_\(messageId.id)_\(date).\(pathExtension)")
+    }
+    if items.isEmpty {
+        finish()
+        return
+    }
+    pending = items.count
+    for (itemIndex, item) in items.enumerated() {
+        let (resource, pathExtension, kindText) = item
+        let destination = monogramSavedMediaDirectory().appendingPathComponent("\(peerId.toInt64())_\(messageId.id)_\(date)_\(itemIndex).\(pathExtension)")
         let _ = (postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> filter { $0.complete }
         |> take(1)).start(next: { data in
-            try? FileManager.default.copyItem(atPath: data.path, toPath: destination.path)
-            MonogramJournal.shared.add(MonogramJournalEntry(kind: .media, peerId: peerId.toInt64(), namespace: messageId.namespace, id: messageId.id, date: date, peerTitle: peerTitle, text: kindText, oldText: destination.path))
+            if (try? FileManager.default.copyItem(atPath: data.path, toPath: destination.path)) != nil {
+                MonogramJournal.shared.add(MonogramJournalEntry(kind: .media, peerId: peerId.toInt64(), namespace: messageId.namespace, id: messageId.id, date: date, peerTitle: peerTitle, text: kindText, oldText: destination.path))
+            }
+            lock.lock()
+            pending -= 1
+            let done = pending <= 0
+            lock.unlock()
+            if done {
+                finish()
+            }
         })
     }
 }
