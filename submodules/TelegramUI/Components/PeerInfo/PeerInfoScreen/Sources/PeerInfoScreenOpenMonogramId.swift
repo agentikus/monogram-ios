@@ -24,7 +24,7 @@ extension PeerInfoScreenNode {
         }
 
         var items: [ContextMenuItem] = []
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_BirthdayActionCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+        items.append(.action(ContextMenuActionItem(text: "Скопировать ID", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
             c?.dismiss {
                 copyAction()
             }

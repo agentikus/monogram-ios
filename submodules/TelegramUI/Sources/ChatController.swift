@@ -240,7 +240,9 @@ struct ScrolledToMessageId: Equatable {
     var allowedReplacementDirection: AllowedReplacementDirections
 }
 
-public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {    
+var monogramSendConfirmed = false
+
+public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     /// iPhone Duo: this screen lays out its own side column, back button included.
     override public var placesNavigationButtonInSideColumn: Bool {
         return false
@@ -2386,7 +2388,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return false
             }
-            
+
+            if MonogramSettings.shared.confirmStickersAndGifs && !monogramSendConfirmed {
+                strongSelf.monogramConfirmSend(text: "Отправить этот стикер?", send: { [weak strongSelf] in
+                    monogramSendConfirmed = true
+                    let _ = strongSelf?.controllerInteraction?.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets)
+                    monogramSendConfirmed = false
+                })
+                return false
+            }
+
             if let _ = strongSelf.presentationInterfaceState.slowmodeState, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                 if let sourceView, let sourceRect {
                     strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceView, sourceRect)
@@ -2666,7 +2677,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceView, sourceRect)
                     return false
                 }
-                
+
+                if MonogramSettings.shared.confirmStickersAndGifs && !monogramSendConfirmed {
+                    strongSelf.monogramConfirmSend(text: "Отправить эту гифку?", send: { [weak strongSelf] in
+                        monogramSendConfirmed = true
+                        let _ = strongSelf?.controllerInteraction?.sendGif(fileReference, sourceView, sourceRect, silentPosting, schedule)
+                        monogramSendConfirmed = false
+                    })
+                    return false
+                }
+
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendGifs) != nil {
                     if !canBypassRestrictions(chatPresentationInterfaceState: strongSelf.presentationInterfaceState) {
                         strongSelf.interfaceInteraction?.openBoostToUnrestrict()

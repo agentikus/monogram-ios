@@ -80,3 +80,13 @@
 - Расшифровка голосовых: по умолчанию на устройстве (SFSpeechRecognizer), добавлен NSSpeechRecognitionUsageDescription (без него iOS закрывал приложение), переключатель в настройках Monogram; убрано принудительное требование офлайн-распознавания.
 - Переключатель режима призрака в Настройках (блок смены фото/цвета профиля).
 - Метка сожжённого настраивается; новые пресеты меток удалено/изменено в стиле AyuGram.
+
+## Партия: подтверждения, фоны, ИИ (локально, не запушено)
+- Подтверждение отправки стикеров и гифок (ChatController.swift, ChatControllerMonogram.swift), настройка confirmStickersAndGifs.
+- Отключение фонов/тем чата от собеседников (ChatControllerContentData.swift), disableCustomChatBackgrounds.
+- Скрытие приветственного стикера (ChatEmptyNode.swift), hideGreetingSticker.
+- Zalgo-фильтр (>3 диакритик подряд) и удаление BIDI-управляющих символов при отображении (StringWithAppliedEntities.swift), filterZalgo.
+- Ссылки tg://chat?id= (OpenUrl.swift).
+- Чат с Claude: свой ключ API, модель, усилие (MonogramClaudeController.swift, MonogramSettingsController.swift, MonogramSettings.swift).
+- Ghost: «Не показывать печатает» уже подавляет все виды активности (запись, загрузка файла); подпись уточнена.
+- Меню ID в профиле: «Копировать дату» заменено на «Скопировать ID» (PeerInfoScreenOpenMonogramId.swift).

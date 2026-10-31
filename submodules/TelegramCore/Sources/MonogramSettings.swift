@@ -300,6 +300,57 @@ public final class MonogramSettings {
         }
     }
     
+    private func boolValue(_ key: String, _ defaultValue: Bool) -> Bool {
+        return (self.defaults.object(forKey: key) as? Bool) ?? defaultValue
+    }
+
+    public var confirmStickersAndGifs: Bool {
+        get { return self.boolValue("monogram_confirmStickersAndGifs", true) }
+        set { self.defaults.set(newValue, forKey: "monogram_confirmStickersAndGifs") }
+    }
+
+    public var disableCustomChatBackgrounds: Bool {
+        get { return self.boolValue("monogram_disableCustomChatBackgrounds", false) }
+        set { self.defaults.set(newValue, forKey: "monogram_disableCustomChatBackgrounds") }
+    }
+
+    public var hideGreetingSticker: Bool {
+        get { return self.boolValue("monogram_hideGreetingSticker", true) }
+        set { self.defaults.set(newValue, forKey: "monogram_hideGreetingSticker") }
+    }
+
+    public var filterZalgo: Bool {
+        get { return self.boolValue("monogram_filterZalgo", true) }
+        set { self.defaults.set(newValue, forKey: "monogram_filterZalgo") }
+    }
+
+    public var claudeApiKey: String {
+        get { return self.defaults.string(forKey: "monogram_claudeApiKey") ?? "" }
+        set { self.defaults.set(newValue, forKey: "monogram_claudeApiKey") }
+    }
+
+    public static let claudeModels: [(id: String, title: String)] = [
+        ("claude-haiku-5-5", "Haiku 5.5"),
+        ("claude-sonnet-5-5", "Sonnet 5.5"),
+        ("claude-opus-5-5", "Opus 5.5")
+    ]
+
+    public var claudeModel: String {
+        get { return self.defaults.string(forKey: "monogram_claudeModel") ?? "claude-haiku-5-5" }
+        set { self.defaults.set(newValue, forKey: "monogram_claudeModel") }
+    }
+
+    public static let claudeEfforts: [(id: String, title: String)] = [
+        ("low", "Низкое"),
+        ("medium", "Среднее"),
+        ("high", "Высокое")
+    ]
+
+    public var claudeEffort: String {
+        get { return self.defaults.string(forKey: "monogram_claudeEffort") ?? "low" }
+        set { self.defaults.set(newValue, forKey: "monogram_claudeEffort") }
+    }
+
     public var hideScreenshotNotifications: Bool {
         get {
             return (defaults.object(forKey: "monogram_hideScreenshotNotifications") as? Bool) ?? true
