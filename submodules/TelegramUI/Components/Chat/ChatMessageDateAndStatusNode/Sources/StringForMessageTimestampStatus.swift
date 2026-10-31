@@ -195,6 +195,12 @@ public func stringForMessageTimestampStatus(
             break
         }
     }
+    for attribute in message.attributes {
+        if attribute is MonogramBurnedMessageAttribute {
+            dateText = "🔥 уничтожено " + dateText
+            break
+        }
+    }
 
     var authorTitle: String?
     if let author = message.author, case .user = author {
