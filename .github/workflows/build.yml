@@ -94,9 +94,12 @@ jobs:
           OUTPUT_PATH="build/artifacts"
           rm -rf "$OUTPUT_PATH"
           mkdir -p "$OUTPUT_PATH"
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa; do
-            cp "$f" $OUTPUT_PATH/Monogram.ipa
-          done
+          IPA_PATH="$(readlink -f bazel-bin/Telegram/Telegram.ipa)"
+          if [ ! -f "$IPA_PATH" ]; then
+            IPA_PATH="$(find -L bazel-out -name Telegram.ipa -path '*opt*' | head -1)"
+          fi
+          echo "IPA: $IPA_PATH"
+          cp "$IPA_PATH" $OUTPUT_PATH/Monogram.ipa
 
       - name: Save Bazel Disk Cache
         uses: actions/cache/save@v4
