@@ -9,7 +9,7 @@ private func monogramSavedMediaDirectory() -> URL {
     return directory
 }
 
-private func monogramFileExtension(for file: TelegramMediaFile) -> String {
+func monogramFileExtension(for file: TelegramMediaFile) -> String {
     if let fileName = file.fileName, let dot = fileName.lastIndex(of: "."), fileName.index(after: dot) < fileName.endIndex {
         return String(fileName[fileName.index(after: dot)...])
     }
@@ -86,20 +86,23 @@ public func monogramSaveSelfDestructingMedia(postbox: Postbox, message: Message,
     pending = items.count
     for (itemIndex, item) in items.enumerated() {
         let (resource, pathExtension, kindText) = item
-        let destination = monogramSavedMediaDirectory().appendingPathComponent("\(peerId.toInt64())_\(messageId.id)_\(date)_\(itemIndex).\(pathExtension)")
+        let fileName = "\(messageId.id)_\(date)_\(itemIndex).\(pathExtension)"
+        let peerUsername = message.peers[peerId]?.addressName
         let _ = (postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> filter { $0.complete }
         |> take(1)).start(next: { data in
-            if (try? FileManager.default.copyItem(atPath: data.path, toPath: destination.path)) != nil {
-                MonogramJournal.shared.add(MonogramJournalEntry(kind: .media, peerId: peerId.toInt64(), namespace: messageId.namespace, id: messageId.id, date: date, peerTitle: peerTitle, text: kindText, oldText: destination.path))
-            }
-            lock.lock()
-            pending -= 1
-            let done = pending <= 0
-            lock.unlock()
-            if done {
-                finish()
-            }
+            MonogramArchive.shared.storeFile(sourcePath: data.path, peerId: peerId.toInt64(), title: peerTitle, username: peerUsername, fileName: fileName, completion: { localPath in
+                if let localPath {
+                    MonogramJournal.shared.add(MonogramJournalEntry(kind: .media, peerId: peerId.toInt64(), namespace: messageId.namespace, id: messageId.id, date: date, peerTitle: peerTitle, text: kindText, oldText: localPath, peerUsername: peerUsername))
+                }
+                lock.lock()
+                pending -= 1
+                let done = pending <= 0
+                lock.unlock()
+                if done {
+                    finish()
+                }
+            })
         })
     }
 }

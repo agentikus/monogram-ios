@@ -7,6 +7,29 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
+import UniformTypeIdentifiers
+
+private final class MonogramFolderPickerDelegate: NSObject, UIDocumentPickerDelegate {
+    private let completion: (URL) -> Void
+
+    init(completion: @escaping (URL) -> Void) {
+        self.completion = completion
+        super.init()
+    }
+
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        if let url = urls.first {
+            self.completion(url)
+        }
+        monogramFolderPickerHolder = nil
+    }
+
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        monogramFolderPickerHolder = nil
+    }
+}
+
+private var monogramFolderPickerHolder: MonogramFolderPickerDelegate?
 
 private final class MonogramSettingsControllerArguments {
     let toggle: (MonogramSettingsOption, Bool) -> Void
@@ -41,6 +64,7 @@ private enum MonogramSettingsOption: Int32 {
     case semiTransparentDeleted
     case markReadAfterAction
     case useScheduled
+    case archiveFolder
     case peekSelfDestructing
     case hidePremiumStatuses
     case filtersEnabled
@@ -174,6 +198,10 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.toggle(305, .hidePremiumStatuses, "Скрыть премиум-статусы", settings.hidePremiumStatuses))
     entries.append(.footer(306, "Локальный премиум включает премиум-интерфейс, стикеры и эмодзи только на этом устройстве. Серверные возможности премиума он не включает. Перезапустите приложение, чтобы изменение вступило в силу."))
 
+    entries.append(.header(500, "АРХИВ"))
+    entries.append(.choice(501, .archiveFolder, "Папка для копии архива", MonogramArchive.shared.externalFolderName ?? "не выбрана"))
+    entries.append(.footer(502, "Удалённые и изменённые сообщения, одноразовые медиа записываются по чатам (имя, username и ID) в папку Monogram в приложении «Файлы» → «На iPhone». Если выбрать свою папку, копия будет дублироваться и туда и переживёт удаление приложения."))
+
     entries.append(.header(400, "ДОПОЛНИТЕЛЬНО"))
     entries.append(.toggle(401, .useScheduled, "Отправлять как запланированные (призрак)", settings.useScheduledMessages))
     entries.append(.toggle(402, .filtersEnabled, "Фильтры сообщений", settings.filtersEnabled))
@@ -240,6 +268,17 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.suggestGhostBeforeStory = value
         case .peekSelfDestructing:
             settings.peekSelfDestructing = value
+        case .archiveFolder:
+            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.folder])
+            picker.allowsMultipleSelection = false
+            let delegate = MonogramFolderPickerDelegate(completion: { url in
+                MonogramArchive.shared.setExternalFolder(url)
+                refreshCounter += 1
+                refresh.set(refreshCounter)
+            })
+            monogramFolderPickerHolder = delegate
+            picker.delegate = delegate
+            context.sharedContext.mainWindow?.presentNative(picker)
         case .useScheduled:
             settings.useScheduledMessages = value
         case .hidePremiumStatuses:

@@ -53,3 +53,5 @@
 - Icon: square artwork, MONOLITH DM text replaced by MONOGRAM (no circle).
 
 - Icon text uses the original 28 Days Later font.
+
+- Archive: per-chat folders (name, username, ID) with chat.txt log and media for deleted/edited/self-destructing content in Documents/Archive (visible in Files) + optional user-picked external folder mirror.

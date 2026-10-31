@@ -15,8 +15,9 @@ public struct MonogramJournalEntry: Codable, Equatable {
     public let peerTitle: String
     public let text: String
     public let oldText: String?
+    public let peerUsername: String?
     
-    public init(kind: Kind, peerId: Int64, namespace: Int32, id: Int32, date: Int32, peerTitle: String, text: String, oldText: String?) {
+    public init(kind: Kind, peerId: Int64, namespace: Int32, id: Int32, date: Int32, peerTitle: String, text: String, oldText: String?, peerUsername: String? = nil) {
         self.kind = kind
         self.peerId = peerId
         self.namespace = namespace
@@ -25,6 +26,7 @@ public struct MonogramJournalEntry: Codable, Equatable {
         self.peerTitle = peerTitle
         self.text = text
         self.oldText = oldText
+        self.peerUsername = peerUsername
     }
 }
 
@@ -65,6 +67,7 @@ public final class MonogramJournal {
         let snapshot = self.items
         self.lock.unlock()
         self.persist(snapshot)
+        MonogramArchive.shared.log(entry: entry)
     }
     
     public func clear() {
