@@ -1347,6 +1347,31 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        if MonogramSettings.shared.showMessageDetails {
+            actions.append(.action(ContextMenuActionItem(text: "Детали сообщения", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                f(.default)
+
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .medium
+                var details = "ID сообщения: \(message.id.id)\nID чата: \(message.id.peerId.toInt64())\nДата: \(formatter.string(from: Date(timeIntervalSince1970: Double(message.timestamp))))"
+                if let author = message.author {
+                    details += "\nID автора: \(author.id.toInt64())"
+                }
+                if let editedTime = message.editedTime {
+                    details += "\nИзменено: \(formatter.string(from: Date(timeIntervalSince1970: Double(editedTime))))"
+                }
+                if message.isMonogramDeleted {
+                    details += "\nСообщение удалено собеседником"
+                }
+                let alert = UIAlertController(title: "Детали сообщения", message: details, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                context.sharedContext.mainWindow?.presentNative(alert)
+            })))
+        }
+
         let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
         if !messageText.isEmpty || richMessageMarkdown != nil || (resourceAvailable && isImage) || diceEmoji != nil {
             if !isExpired {

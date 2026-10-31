@@ -13,6 +13,7 @@ public final class MonogramSettings {
     private let markEditedMessagesKey = "monogram_markEditedMessages"
     private let confirmVoiceAndVideoKey = "monogram_confirmVoiceAndVideo"
     private let disableAdsKey = "monogram_disableAds"
+    private let showMessageDetailsKey = "monogram_showMessageDetails"
     private let disableStoriesKey = "monogram_disableStories"
     private let editedMarkKey = "monogram_editedMark"
     private let sendSilentInGhostKey = "monogram_sendSilentInGhost"
@@ -161,6 +162,15 @@ public final class MonogramSettings {
         }
         set {
             defaults.set(newValue, forKey: showMessageSecondsKey)
+        }
+    }
+    
+    public var showMessageDetails: Bool {
+        get {
+            return (defaults.object(forKey: showMessageDetailsKey) as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: showMessageDetailsKey)
         }
     }
     
