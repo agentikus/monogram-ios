@@ -3,6 +3,7 @@ import UIKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import MonogramAISettings
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -218,8 +219,8 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.footer(502, "Удалённые и изменённые сообщения, одноразовые медиа записываются по чатам (имя, username и ID) в папку Monogram в приложении «Файлы» → «На iPhone». Если выбрать свою папку, копия будет дублироваться и туда и переживёт удаление приложения."))
 
     entries.append(.header(450, "ИИ"))
-    entries.append(.toggle(453, .showClaudeChat, "Показывать чат Claude в списке чатов", settings.showClaudeChat))
-    entries.append(.choice(451, .openClaude, "Чат с Claude", settings.claudeApiKey.isEmpty ? "нет ключа" : "готов"))
+    entries.append(.toggle(453, .showClaudeChat, "Показывать чат Claude в списке чатов", MonogramAISettings.shared.showClaudeChat))
+    entries.append(.choice(451, .openClaude, "Чат с Claude", MonogramAISettings.shared.claudeApiKey.isEmpty ? "нет ключа" : "готов"))
     entries.append(.footer(452, "Свой ключ API Anthropic, выбор модели и усилия. Ключ хранится только на устройстве."))
 
     entries.append(.header(400, "ДОПОЛНИТЕЛЬНО"))
@@ -337,7 +338,7 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
         case .filterZalgo:
             settings.filterZalgo = value
         case .showClaudeChat:
-            settings.showClaudeChat = value
+            MonogramAISettings.shared.showClaudeChat = value
         case .openClaude:
             pushControllerImpl?(monogramClaudeController(context: context))
         case .cycleTranslation:

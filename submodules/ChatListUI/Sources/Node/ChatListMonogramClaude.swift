@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TelegramCore
+import MonogramAISettings
 
 // Служебный peer-id строки «Claude» в списке чатов. Это не настоящий чат: строка рисуется обычным
 // элементом списка, а нажатие перехватывается и открывает экран ИИ.
@@ -36,7 +37,7 @@ func monogramClaudeRenderedPeer() -> EngineRenderedPeer {
 }
 
 func monogramClaudeMessages() -> [EngineMessage] {
-    let settings = MonogramSettings.shared
+    let settings = MonogramAISettings.shared
     let preview = settings.claudeLastPreview
     let text = preview.isEmpty ? "Задайте вопрос ИИ" : preview
     var timestamp = settings.claudeLastTimestamp
