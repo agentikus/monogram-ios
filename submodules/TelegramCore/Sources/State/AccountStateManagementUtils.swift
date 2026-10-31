@@ -4606,6 +4606,8 @@ func replayFinalState(
                         let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
                     }
                     deletedMessageIds.append(contentsOf: ids.map { .global($0) })
+                } else {
+                    markMessagesAsDeletedLocally(transaction: transaction, ids: transaction.messageIdsForGlobalIds(ids))
                 }
             case let .DeleteMessages(ids):
                 if !MonogramSettings.shared.saveDeletedMessages {
@@ -4613,6 +4615,8 @@ func replayFinalState(
                         addMessageThreadStatsDifference(threadKey: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
                     })
                     deletedMessageIds.append(contentsOf: ids.map { .messageId($0) })
+                } else {
+                    markMessagesAsDeletedLocally(transaction: transaction, ids: ids)
                 }
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {

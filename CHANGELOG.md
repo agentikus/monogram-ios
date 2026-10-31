@@ -29,3 +29,8 @@
 - Переподписаны тестовые provisioning профили (`.mobileprovision`) через ASN.1 PKCS#7 / CMS с продлением срока действия до 2030 года, устранив ошибку устаревания профилей в `rules_apple` `plisttool` и проверку OpenSSL S/MIME.
 
 
+
+## Stage 1 (2026-10-31)
+- Monogram settings screen (ghost mode, save deleted, keep original of edited)
+- Deleted-message mark in bubble timestamp (MonogramDeletedMessageAttribute)
+- App icon from MONOLITH DM logo (circular), backups in F:\Silentackup_20261031_1400

@@ -182,6 +182,13 @@ public func stringForMessageTimestampStatus(
         dateText = strings.Message_ImportedDateFormat(dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date), stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat), dateText).string
     }
     
+    for attribute in message.attributes {
+        if attribute is MonogramDeletedMessageAttribute {
+            dateText = "🗑 удалено " + dateText
+            break
+        }
+    }
+
     var authorTitle: String?
     if let author = message.author, case .user = author {
         if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {

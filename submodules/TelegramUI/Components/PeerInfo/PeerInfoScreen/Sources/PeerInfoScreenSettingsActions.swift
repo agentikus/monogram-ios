@@ -276,6 +276,8 @@ extension PeerInfoScreenNode {
             self.headerNode.invokeDisplayPremiumIntro()
         case .profileColor:
             self.interaction.editingOpenNameColorSetup()
+        case .monogram:
+            push(monogramSettingsController(context: self.context))
         case .powerSaving:
             push(energySavingSettingsScreen(context: self.context))
         case .businessSetup:
