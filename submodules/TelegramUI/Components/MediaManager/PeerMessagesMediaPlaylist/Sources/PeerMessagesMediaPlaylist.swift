@@ -917,6 +917,9 @@ public final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 default:
                     break
             }
+            if monogramShouldPeekWithoutConsuming(item.message) {
+                return
+            }
             let _ = self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: item.message.id).startStandalone()
         }
     }
