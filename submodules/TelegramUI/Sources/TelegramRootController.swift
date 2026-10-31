@@ -242,6 +242,13 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.chatListController = chatListController
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
+
+        monogramClaudeOpenHandler = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.pushViewController(monogramClaudeController(context: self.context))
+        }
         self.pushViewController(tabBarController, animated: false)
     }
         

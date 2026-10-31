@@ -1449,6 +1449,10 @@ public final class ChatListNode: ListViewImpl {
                 activateSearch()
             }
         }, peerSelected: { [weak self] peer, _, threadId, promoInfo, _ in
+            if peer.id == monogramClaudePeerId {
+                monogramClaudeOpenHandler?()
+                return
+            }
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
                 peerSelected(peer, threadId, true, true, promoInfo)
             }
@@ -1458,6 +1462,9 @@ public final class ChatListNode: ListViewImpl {
             }
         }, togglePeerSelected: { [weak self] peer, _ in
             guard let strongSelf = self else {
+                return
+            }
+            if peer.id == monogramClaudePeerId {
                 return
             }
             if case .peers = strongSelf.mode, strongSelf.passthroughPeerSelection {
