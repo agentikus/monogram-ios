@@ -13,6 +13,8 @@ public final class MonogramSettings {
     private let markEditedMessagesKey = "monogram_markEditedMessages"
     private let confirmVoiceAndVideoKey = "monogram_confirmVoiceAndVideo"
     private let disableAdsKey = "monogram_disableAds"
+    private let semiTransparentDeletedKey = "monogram_semiTransparentDeleted"
+    private let markReadAfterActionKey = "monogram_markReadAfterAction"
     private let showMessageDetailsKey = "monogram_showMessageDetails"
     private let disableStoriesKey = "monogram_disableStories"
     private let editedMarkKey = "monogram_editedMark"
@@ -24,7 +26,28 @@ public final class MonogramSettings {
     private let saveSelfDestructingMediaKey = "monogram_saveSelfDestructingMedia"
     private let localPremiumKey = "monogram_localPremium"
     
+    private let readPushLock = NSLock()
+    private var readPushAllowedPeers = Set<Int64>()
+    
     private init() {}
+    
+    func setReadPushAllowed(_ peerId: Int64, _ allowed: Bool) {
+        self.readPushLock.lock()
+        if allowed {
+            self.readPushAllowedPeers.insert(peerId)
+        } else {
+            self.readPushAllowedPeers.remove(peerId)
+        }
+        self.readPushLock.unlock()
+    }
+    
+    func isReadPushAllowed(_ peerId: Int64) -> Bool {
+        self.readPushLock.lock()
+        defer {
+            self.readPushLock.unlock()
+        }
+        return self.readPushAllowedPeers.contains(peerId)
+    }
     
     public var sendOnline: Bool {
         get {
@@ -171,6 +194,24 @@ public final class MonogramSettings {
         }
         set {
             defaults.set(newValue, forKey: showMessageDetailsKey)
+        }
+    }
+    
+    public var semiTransparentDeleted: Bool {
+        get {
+            return (defaults.object(forKey: semiTransparentDeletedKey) as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: semiTransparentDeletedKey)
+        }
+    }
+    
+    public var markReadAfterAction: Bool {
+        get {
+            return (defaults.object(forKey: markReadAfterActionKey) as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: markReadAfterActionKey)
         }
     }
     
