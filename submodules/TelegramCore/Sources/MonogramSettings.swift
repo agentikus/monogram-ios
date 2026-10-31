@@ -177,7 +177,7 @@ public final class MonogramSettings {
         }
     }
     
-    public static let deletedMarkPresets: [String] = ["🗑 удалено", "🗑", "удалено", "❌ удалено", "👻 удалено"]
+    public static let deletedMarkPresets: [String] = ["🗑 удалено", "🗑", "удалено", "❌ удалено", "👻 удалено", "🧹", "🧹 удалено"]
     
     public var removeMessageTail: Bool {
         get {
@@ -185,6 +185,17 @@ public final class MonogramSettings {
         }
         set {
             defaults.set(newValue, forKey: removeMessageTailKey)
+        }
+    }
+    
+    public static let burnedMarkPresets: [String] = ["🔥 уничтожено", "🔥", "уничтожено", "💥 уничтожено", "🧹 уничтожено"]
+    
+    public var burnedMark: String {
+        get {
+            return defaults.string(forKey: "monogram_burnedMark") ?? MonogramSettings.burnedMarkPresets[0]
+        }
+        set {
+            defaults.set(newValue, forKey: "monogram_burnedMark")
         }
     }
     
@@ -206,7 +217,7 @@ public final class MonogramSettings {
         }
     }
     
-    public static let editedMarkPresets: [String] = ["изменено", "✏️ изменено", "✏️", "изм."]
+    public static let editedMarkPresets: [String] = ["изменено", "✏️ изменено", "✏️", "изм.", "📝", "📝 изменено"]
     
     public var disableStories: Bool {
         get {
@@ -277,6 +288,15 @@ public final class MonogramSettings {
         }
         set {
             defaults.set(newValue, forKey: "monogram_peekSelfDestructing")
+        }
+    }
+    
+    public var localTranscription: Bool {
+        get {
+            return (defaults.object(forKey: "monogram_localTranscription") as? Bool) ?? true
+        }
+        set {
+            defaults.set(newValue, forKey: "monogram_localTranscription")
         }
     }
     
