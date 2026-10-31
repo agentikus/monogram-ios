@@ -13,6 +13,10 @@ public final class MonogramSettings {
     private let markEditedMessagesKey = "monogram_markEditedMessages"
     private let confirmVoiceAndVideoKey = "monogram_confirmVoiceAndVideo"
     private let disableAdsKey = "monogram_disableAds"
+    private let disableStoriesKey = "monogram_disableStories"
+    private let editedMarkKey = "monogram_editedMark"
+    private let sendSilentInGhostKey = "monogram_sendSilentInGhost"
+    private let showMessageSecondsKey = "monogram_showMessageSeconds"
     private let suggestGhostBeforeStoryKey = "monogram_suggestGhostBeforeStory"
     private let removeMessageTailKey = "monogram_removeMessageTail"
     private let deletedMarkKey = "monogram_deletedMark"
@@ -119,6 +123,44 @@ public final class MonogramSettings {
         }
         set {
             defaults.set(newValue, forKey: suggestGhostBeforeStoryKey)
+        }
+    }
+    
+    public static let editedMarkPresets: [String] = ["изменено", "✏️ изменено", "✏️", "изм."]
+    
+    public var disableStories: Bool {
+        get {
+            return (defaults.object(forKey: disableStoriesKey) as? Bool) ?? false
+        }
+        set {
+            defaults.set(newValue, forKey: disableStoriesKey)
+        }
+    }
+    
+    public var editedMark: String {
+        get {
+            return defaults.string(forKey: editedMarkKey) ?? MonogramSettings.editedMarkPresets[0]
+        }
+        set {
+            defaults.set(newValue, forKey: editedMarkKey)
+        }
+    }
+    
+    public var sendSilentInGhost: Bool {
+        get {
+            return (defaults.object(forKey: sendSilentInGhostKey) as? Bool) ?? false
+        }
+        set {
+            defaults.set(newValue, forKey: sendSilentInGhostKey)
+        }
+    }
+    
+    public var showMessageSeconds: Bool {
+        get {
+            return (defaults.object(forKey: showMessageSecondsKey) as? Bool) ?? false
+        }
+        set {
+            defaults.set(newValue, forKey: showMessageSecondsKey)
         }
     }
     

@@ -607,7 +607,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             if arguments.edited {
                 if let useEditedTimestamp = arguments.context.getAppConfigValue("message_primary_edited_date") as? Bool, useEditedTimestamp {
                 } else {
-                    updatedDateText = "\(arguments.presentationData.strings.Conversation_MessageEditedLabel) \(updatedDateText)"
+                    updatedDateText = "\(MonogramSettings.shared.editedMark) \(updatedDateText)"
                 }
             }
             if let impressionCount = arguments.impressionCount {

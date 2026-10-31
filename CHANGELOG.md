@@ -38,3 +38,4 @@
 ## Stage 2 (2026-10-31)
 - Journal screen (deleted/edited/self-destructing media), edit-marker fix
 - Confirm voice/video before sending, disable ads, local premium, remove bubble tail, custom deleted mark, save TTL media on open
+- Hide stories row, custom edited mark, seconds in time, silent send in ghost mode, ghost suggestion before stories

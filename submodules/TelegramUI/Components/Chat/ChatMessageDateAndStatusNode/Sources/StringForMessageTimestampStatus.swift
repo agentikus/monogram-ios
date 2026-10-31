@@ -112,6 +112,13 @@ public func stringForMessageTimestampStatus(
         dateText = "         "
     }
     
+    if MonogramSettings.shared.showMessageSeconds && timestamp != scheduleWhenOnlineTimestamp {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .medium
+        dateText = formatter.string(from: Date(timeIntervalSince1970: Double(timestamp)))
+    }
+    
     if let repeatPeriod = message.scheduleRepeatPeriod {
         let repeatString: String
         switch repeatPeriod {
