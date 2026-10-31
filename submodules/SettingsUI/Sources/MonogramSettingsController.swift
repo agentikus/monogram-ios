@@ -33,6 +33,10 @@ private enum MonogramSettingsOption: Int32 {
     case removeTail
     case cycleDeletedMark
     case suggestGhostStory
+    case disableStories
+    case cycleEditedMark
+    case silentInGhost
+    case showSeconds
 }
 
 private enum MonogramSettingsEntry: ItemListNodeEntry {
@@ -127,8 +131,9 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.toggle(3, .hideTyping, "Не показывать «печатает…»", !settings.sendTyping))
     entries.append(.toggle(4, .hideReadMessages, "Не отмечать сообщения прочитанными", !settings.sendReadMessages))
     entries.append(.toggle(5, .hideReadStories, "Не отмечать истории просмотренными", !settings.sendReadStories))
+    entries.append(.toggle(7, .silentInGhost, "Отправлять без звука в режиме призрака", settings.sendSilentInGhost))
     entries.append(.toggle(6, .suggestGhostStory, "Предлагать призрака перед просмотром истории", settings.suggestGhostBeforeStory))
-    entries.append(.footer(7, "Собеседники не увидят, что вы онлайн, печатаете или прочитали сообщение. Ответ на сообщение или действие в чате может отправить отметку «прочитано»."))
+    entries.append(.footer(8, "Собеседники не увидят, что вы онлайн, печатаете или прочитали сообщение. Ответ на сообщение или действие в чате может отправить отметку «прочитано»."))
 
     entries.append(.header(100, "СООБЩЕНИЯ"))
     entries.append(.toggle(101, .saveDeleted, "Сохранять удалённые сообщения", settings.saveDeletedMessages))
@@ -139,14 +144,17 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.footer(106, "Удалённые сообщения остаются в чате и помечаются значком корзины. У изменённых сообщений внизу добавляется исходный текст в формате «[Было: …]»."))
 
     entries.append(.header(200, "ОФОРМЛЕНИЕ И ОТПРАВКА"))
-    entries.append(.toggle(203, .removeTail, "Убрать хвостик у сообщений", settings.removeMessageTail))
-    entries.append(.toggle(201, .confirmVoiceAndVideo, "Подтверждать голосовые и кружки", settings.confirmVoiceAndVideo))
-    entries.append(.footer(202, "После записи голосового или кружка открывается предпросмотр: можно прослушать, изменить или удалить запись и только потом отправить."))
+    entries.append(.choice(202, .cycleEditedMark, "Метка изменённого сообщения", settings.editedMark))
+    entries.append(.toggle(203, .showSeconds, "Показывать секунды во времени сообщения", settings.showMessageSeconds))
+    entries.append(.toggle(201, .removeTail, "Убрать хвостик у сообщений", settings.removeMessageTail))
+    entries.append(.toggle(204, .confirmVoiceAndVideo, "Подтверждать голосовые и кружки", settings.confirmVoiceAndVideo))
+    entries.append(.footer(205, "После записи голосового или кружка открывается предпросмотр: можно прослушать, изменить или удалить запись и только потом отправить."))
 
     entries.append(.header(300, "ПРЕМИУМ И РЕКЛАМА"))
     entries.append(.toggle(301, .localPremium, "Локальный премиум", settings.localPremium))
-    entries.append(.toggle(302, .disableAds, "Отключить рекламу", settings.disableAds))
-    entries.append(.footer(303, "Локальный премиум включает премиум-интерфейс, стикеры и эмодзи только на этом устройстве. Серверные возможности премиума он не включает. Перезапустите приложение, чтобы изменение вступило в силу."))
+    entries.append(.toggle(302, .disableStories, "Скрыть ленту историй", settings.disableStories))
+    entries.append(.toggle(303, .disableAds, "Отключить рекламу", settings.disableAds))
+    entries.append(.footer(304, "Локальный премиум включает премиум-интерфейс, стикеры и эмодзи только на этом устройстве. Серверные возможности премиума он не включает. Перезапустите приложение, чтобы изменение вступило в силу."))
 
     return entries
 }
@@ -183,6 +191,16 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.saveSelfDestructingMedia = value
         case .removeTail:
             settings.removeMessageTail = value
+        case .disableStories:
+            settings.disableStories = value
+        case .cycleEditedMark:
+            let presets = MonogramSettings.editedMarkPresets
+            let currentIndex = presets.firstIndex(of: settings.editedMark) ?? 0
+            settings.editedMark = presets[(currentIndex + 1) % presets.count]
+        case .silentInGhost:
+            settings.sendSilentInGhost = value
+        case .showSeconds:
+            settings.showMessageSeconds = value
         case .suggestGhostStory:
             settings.suggestGhostBeforeStory = value
         case .cycleDeletedMark:
