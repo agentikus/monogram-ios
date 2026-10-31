@@ -634,7 +634,6 @@ public final class SecretMediaPreviewController: ViewController {
         button.titleLabel?.font = UIFont.systemFont(ofSize: 17.0, weight: .semibold)
         button.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
         button.layer.cornerRadius = 22.0
-        button.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 24.0, bottom: 0.0, right: 24.0)
         button.translatesAutoresizingMaskIntoConstraints = false
         self.monogramBurnAction = onBurn
         button.addTarget(self, action: #selector(self.monogramBurnPressed), for: .touchUpInside)
@@ -643,7 +642,8 @@ public final class SecretMediaPreviewController: ViewController {
         NSLayoutConstraint.activate([
             button.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             button.bottomAnchor.constraint(equalTo: container.safeAreaLayoutGuide.bottomAnchor, constant: -24.0),
-            button.heightAnchor.constraint(equalToConstant: 44.0)
+            button.heightAnchor.constraint(equalToConstant: 44.0),
+            button.widthAnchor.constraint(equalToConstant: 150.0)
         ])
         self.monogramBurnButton = button
     }
