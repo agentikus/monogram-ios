@@ -11,6 +11,47 @@ import AccountContext
 private struct MonogramClaudeMessage: Equatable {
     let role: String
     let text: String
+    var imageBase64: String? = nil
+}
+
+private final class MonogramPhotoPickerDelegate: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    private let completion: (UIImage?) -> Void
+
+    init(completion: @escaping (UIImage?) -> Void) {
+        self.completion = completion
+        super.init()
+    }
+
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+        let image = info[.originalImage] as? UIImage
+        picker.dismiss(animated: true)
+        self.completion(image)
+        monogramPhotoPickerHolder = nil
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
+        self.completion(nil)
+        monogramPhotoPickerHolder = nil
+    }
+}
+
+private var monogramPhotoPickerHolder: MonogramPhotoPickerDelegate?
+
+/// Уменьшает фото до 1568 px по длинной стороне и кодирует в JPEG base64 (меньше токенов и трафика).
+private func monogramEncodeImage(_ image: UIImage) -> String? {
+    let size = image.size
+    if size.width < 1.0 || size.height < 1.0 {
+        return nil
+    }
+    let scale = min(1.0, 1568.0 / max(size.width, size.height))
+    let target = CGSize(width: max(1.0, (size.width * scale).rounded()), height: max(1.0, (size.height * scale).rounded()))
+    let format = UIGraphicsImageRendererFormat.default()
+    format.scale = 1.0
+    let rendered = UIGraphicsImageRenderer(size: target, format: format).image { _ in
+        image.draw(in: CGRect(origin: .zero, size: target))
+    }
+    return rendered.jpegData(compressionQuality: 0.8)?.base64EncodedString()
 }
 
 private final class MonogramClaudeState {
@@ -18,6 +59,7 @@ private final class MonogramClaudeState {
     var input: String = ""
     var isLoading = false
     var error: String?
+    var pendingImage: String?
 }
 
 private final class MonogramClaudeArguments {
@@ -28,8 +70,10 @@ private final class MonogramClaudeArguments {
     let copyLast: () -> Void
     let cycleModel: () -> Void
     let cycleEffort: () -> Void
+    let pickPhoto: () -> Void
+    let removePhoto: () -> Void
 
-    init(updateInput: @escaping (String) -> Void, updateKey: @escaping (String) -> Void, send: @escaping () -> Void, clear: @escaping () -> Void, copyLast: @escaping () -> Void, cycleModel: @escaping () -> Void, cycleEffort: @escaping () -> Void) {
+    init(updateInput: @escaping (String) -> Void, updateKey: @escaping (String) -> Void, send: @escaping () -> Void, clear: @escaping () -> Void, copyLast: @escaping () -> Void, cycleModel: @escaping () -> Void, cycleEffort: @escaping () -> Void, pickPhoto: @escaping () -> Void, removePhoto: @escaping () -> Void) {
         self.updateInput = updateInput
         self.updateKey = updateKey
         self.send = send
@@ -37,6 +81,8 @@ private final class MonogramClaudeArguments {
         self.copyLast = copyLast
         self.cycleModel = cycleModel
         self.cycleEffort = cycleEffort
+        self.pickPhoto = pickPhoto
+        self.removePhoto = removePhoto
     }
 }
 
@@ -113,9 +159,14 @@ private enum MonogramClaudeEntry: ItemListNodeEntry {
             })
         case let .action(_, title, tag):
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: tag == 1 ? .destructive : .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                if tag == 1 {
+                switch tag {
+                case 1:
                     arguments.clear()
-                } else {
+                case 2:
+                    arguments.pickPhoto()
+                case 3:
+                    arguments.removePhoto()
+                default:
                     arguments.copyLast()
                 }
             })
@@ -141,10 +192,10 @@ private func monogramClaudeEntries(state: MonogramClaudeState) -> [MonogramClaud
 
     entries.append(.header(0, "ДИАЛОГ"))
     if state.messages.isEmpty {
-        entries.append(.info(1, "Задайте вопрос ниже. История хранится только на экране и пропадает при закрытии."))
+        entries.append(.info(1, "Задайте вопрос ниже, при желании прикрепив фото. История хранится только на экране и пропадает при закрытии. Фото отправляется только вместе с тем сообщением, к которому прикреплено."))
     }
     for (index, message) in state.messages.enumerated() {
-        entries.append(.message(10 + Int32(index), message.role == "user" ? "Вы" : "Claude", message.text))
+        entries.append(.message(10 + Int32(index), message.role == "user" ? "Вы" : "Claude", (message.imageBase64 != nil ? "📷 " : "") + message.text))
     }
     if state.isLoading {
         entries.append(.info(900, "Claude отвечает…"))
@@ -154,12 +205,17 @@ private func monogramClaudeEntries(state: MonogramClaudeState) -> [MonogramClaud
     }
 
     entries.append(.input(1000, state.input))
-    entries.append(.send(1001, state.isLoading ? "Отправка…" : "Отправить", state.isLoading))
+    if state.pendingImage == nil {
+        entries.append(.action(1001, "Прикрепить фото", 2))
+    } else {
+        entries.append(.action(1001, "Фото прикреплено — убрать", 3))
+    }
+    entries.append(.send(1002, state.isLoading ? "Отправка…" : "Отправить", state.isLoading))
     if state.messages.last?.role == "assistant" {
-        entries.append(.action(1002, "Скопировать последний ответ", 0))
+        entries.append(.action(1003, "Скопировать последний ответ", 0))
     }
     if !state.messages.isEmpty {
-        entries.append(.action(1003, "Очистить диалог", 1))
+        entries.append(.action(1004, "Очистить диалог", 1))
     }
 
     let modelTitle = MonogramSettings.claudeModels.first(where: { $0.id == settings.claudeModel })?.title ?? settings.claudeModel
@@ -185,7 +241,17 @@ private func monogramClaudeSend(apiKey: String, model: String, effort: String, m
         "max_tokens": 16000,
         "system": "Отвечай на языке пользователя.",
         "output_config": ["effort": effort],
-        "messages": messages.map { ["role": $0.role, "content": $0.text] }
+        "messages": messages.enumerated().map { index, message -> [String: Any] in
+            // Фото отправляется только в последнем сообщении, в старых остаётся пометка (экономия токенов).
+            if let image = message.imageBase64, index == messages.count - 1 {
+                return ["role": message.role, "content": [
+                    ["type": "image", "source": ["type": "base64", "media_type": "image/jpeg", "data": image]],
+                    ["type": "text", "text": message.text]
+                ]]
+            }
+            return ["role": message.role, "content": message.imageBase64 != nil ? "[фото отправлено ранее]
+" + message.text : message.text]
+        }
     ]
     var didRetryWithoutEffort = false
 
@@ -269,18 +335,21 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
         MonogramSettings.shared.claudeApiKey = value.trimmingCharacters(in: .whitespacesAndNewlines)
     }, send: {
         let settings = MonogramSettings.shared
-        let text = state.input.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.isEmpty {
+        let image = state.pendingImage
+        let rawText = state.input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if rawText.isEmpty && image == nil {
             return
         }
+        let text = rawText.isEmpty ? "Что на фото?" : rawText
         if settings.claudeApiKey.isEmpty {
             state.error = "введите ключ API в настройках ниже"
             update()
             return
         }
         state.error = nil
-        state.messages.append(MonogramClaudeMessage(role: "user", text: text))
+        state.messages.append(MonogramClaudeMessage(role: "user", text: text, imageBase64: image))
         state.input = ""
+        state.pendingImage = nil
         state.isLoading = true
         update()
         monogramClaudeSend(apiKey: settings.claudeApiKey, model: settings.claudeModel, effort: settings.claudeEffort, messages: state.messages, completion: { result in
@@ -292,6 +361,7 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
                 case let .failure(error):
                     state.messages.removeLast()
                     state.input = text
+                    state.pendingImage = image
                     state.error = error.text
                 }
                 update()
@@ -316,6 +386,24 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
         let efforts = MonogramSettings.claudeEfforts
         let index = efforts.firstIndex(where: { $0.id == settings.claudeEffort }) ?? 0
         settings.claudeEffort = efforts[(index + 1) % efforts.count].id
+        update()
+    }, pickPhoto: {
+        let picker = UIImagePickerController()
+        picker.sourceType = .photoLibrary
+        let delegate = MonogramPhotoPickerDelegate(completion: { image in
+            if let image = image, let encoded = monogramEncodeImage(image) {
+                state.pendingImage = encoded
+                state.error = nil
+            } else if image != nil {
+                state.error = "не удалось подготовить фото"
+            }
+            update()
+        })
+        monogramPhotoPickerHolder = delegate
+        picker.delegate = delegate
+        context.sharedContext.mainWindow?.presentNative(picker)
+    }, removePhoto: {
+        state.pendingImage = nil
         update()
     })
 
