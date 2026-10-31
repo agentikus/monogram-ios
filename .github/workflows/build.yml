@@ -83,7 +83,9 @@ jobs:
           python3 -u build-system/Make/Make.py \
             --overrideXcodeVersion \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
+            --cacheDir=/Users/Shared/bazel-cache \
             build \
+            --continueOnError \
             --configurationPath="build-system/appstore-configuration.json" \
             --codesigningInformationPath=build-system/fake-codesigning \
             --configuration=release_arm64 \
