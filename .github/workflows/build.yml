@@ -92,7 +92,8 @@ jobs:
             --continueOnError \
             --configurationPath="build-system/appstore-configuration.json" \
             --codesigningInformationPath=build-system/fake-codesigning \
-            --configuration=release_arm64             --generateDsym \
+            --configuration=release_arm64 \
+            --outputBuildArtifactsPath=/Users/Shared/telegram-ios/build/dsym-out \
             --buildNumber="$BUILD_NUMBER"
 
           OUTPUT_PATH="build/artifacts"
