@@ -1,5 +1,9 @@
 # Changelog: Monogram iOS
 
+## 2026-11-01 (final14)
+- Сожжённое медиа остаётся самоуничтожающимся в чате (размытая заглушка с меткой), а не разворачивается в полный размер: `containsSecretMedia` теперь учитывает `MonogramBurnedMessageAttribute` (`SyncCore_AutoremoveTimeoutMessageAttribute.swift`).
+- Локальные звёзды (`MonogramLocalStars.swift`, `MonogramStarsController.swift`): свой показываемый баланс, свои операции и подписки отдельно для каждого аккаунта; подмена идёт в `Stars.swift` в `_internal_requestStarsState`, `_internal_requestStarsSubscriptions` и при серверных обновлениях баланса. Настройки Monogram → «Звёзды (локально)».
+
 ## 2026-11-01 (final10)
 - Чат с Claude теперь обычный экран-чат: пузыри сообщений, поле ввода, кнопка фото, история хранится на устройстве; настройки (ключ, модель, усилие, очистка) вынесены на отдельный экран.
 - Разгрузка CPU: часто читаемые настройки (`hidePremiumStatuses`, `localPremium`, `ignoreCopyProtection`, `disableAds`, `peekSelfDestructing`) кэшируются в памяти вместо чтения UserDefaults на каждый вызов; у строки Claude в списке чатов время больше не меняется при каждом обновлении.

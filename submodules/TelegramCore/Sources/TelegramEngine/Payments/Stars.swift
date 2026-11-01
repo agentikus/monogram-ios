@@ -483,7 +483,7 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
                             }
                         }
                     }
-                    return InternalStarsStatus(
+                    let parsedStatus = InternalStarsStatus(
                         balance: StarsAmount(apiAmount: balance),
                         subscriptionsMissingBalance: subscriptionsMissingBalance.flatMap { StarsAmount(value: $0, nanos: 0) },
                         subscriptions: [],
@@ -491,6 +491,10 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
                         transactions: parsedTransactions,
                         nextTransactionsOffset: nextTransactionsOffset
                     )
+                    if peerId == account.peerId {
+                        return MonogramLocalStars.shared.applying(to: parsedStatus, accountId: account.peerId.toInt64(), ton: ton, mode: mode, firstPage: offset == nil || offset == "")
+                    }
+                    return parsedStatus
                 }
             }
             |> castError(RequestStarsStateError.self)
@@ -539,7 +543,7 @@ private func _internal_requestStarsSubscriptions(account: Account, peerId: Engin
                             }
                         }
                     }
-                    return InternalStarsStatus(
+                    let parsedStatus = InternalStarsStatus(
                         balance: StarsAmount(apiAmount: balance),
                         subscriptionsMissingBalance: subscriptionsMissingBalance.flatMap { StarsAmount(value: $0, nanos: 0) },
                         subscriptions: parsedSubscriptions,
@@ -547,6 +551,10 @@ private func _internal_requestStarsSubscriptions(account: Account, peerId: Engin
                         transactions: [],
                         nextTransactionsOffset: nil
                     )
+                    if peerId == account.peerId {
+                        return MonogramLocalStars.shared.applying(to: parsedStatus, accountId: account.peerId.toInt64(), missingBalance: missingBalance, firstPage: offset.isEmpty)
+                    }
+                    return parsedStatus
                 }
             }
             |> castError(RequestStarsSubscriptionsError.self)
@@ -582,8 +590,11 @@ private final class StarsContextImpl {
         
         self.updateDisposable = ((ton ? account.stateManager.updatedTonBalance() : account.stateManager.updatedStarsBalance())
         |> deliverOnMainQueue).startStrict(next: { [weak self] balances in
-            guard let self, let state = self._state, let balance = balances[self.peerId] else {
+            guard let self, let state = self._state, var balance = balances[self.peerId] else {
                 return
+            }
+            if !self.ton, let override = MonogramLocalStars.shared.balance(accountId: self.peerId.toInt64()) {
+                balance = StarsAmount(value: override, nanos: 0)
             }
             self.updateState(StarsContext.State(flags: [], balance: balance, subscriptions: state.subscriptions, canLoadMoreSubscriptions: state.canLoadMoreSubscriptions, transactions: state.transactions, canLoadMoreTransactions: state.canLoadMoreTransactions, isLoading: false))
             self.load(force: true)

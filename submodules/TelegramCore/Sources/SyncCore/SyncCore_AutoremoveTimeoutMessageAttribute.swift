@@ -142,13 +142,15 @@ public extension Message {
     }
     
     var containsSecretMedia: Bool {
-        guard let timeout = self.minAutoremoveOrClearTimeout else {
-            return false
+        if !self.isMonogramBurned {
+            guard let timeout = self.minAutoremoveOrClearTimeout else {
+                return false
+            }
+            if timeout > 1 * 60 && timeout != viewOnceTimeout {
+                return false
+            }
         }
-        if timeout > 1 * 60 && timeout != viewOnceTimeout {
-            return false
-        }
-        
+
         for media in self.media {
             switch media {
                 case _ as TelegramMediaImage:

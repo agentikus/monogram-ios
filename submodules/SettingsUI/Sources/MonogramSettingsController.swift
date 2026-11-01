@@ -86,6 +86,7 @@ private enum MonogramSettingsOption: Int32 {
     case showClaudeChat
     case diagnostics
     case openClaude
+    case openStars
 }
 
 private enum MonogramSettingsEntry: ItemListNodeEntry {
@@ -170,7 +171,7 @@ private enum MonogramSettingsEntry: ItemListNodeEntry {
     }
 }
 
-private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
+private func monogramSettingsEntries(accountId: Int64) -> [MonogramSettingsEntry] {
     let settings = MonogramSettings.shared
     var entries: [MonogramSettingsEntry] = []
 
@@ -210,6 +211,7 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
 
     entries.append(.header(300, "ПРЕМИУМ И РЕКЛАМА"))
     entries.append(.toggle(301, .localPremium, "Локальный премиум", settings.localPremium))
+    entries.append(.choice(304, .openStars, "Звёзды (локально)", MonogramLocalStars.shared.balance(accountId: accountId).flatMap { "\($0) ⭐️" } ?? "настоящий баланс"))
     entries.append(.toggle(302, .disableStories, "Скрыть ленту историй", settings.disableStories))
     entries.append(.toggle(303, .disableAds, "Отключить рекламу", settings.disableAds))
     entries.append(.toggle(305, .hidePremiumStatuses, "Скрыть премиум-статусы", settings.hidePremiumStatuses))
@@ -346,6 +348,8 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.showClaudeChat = value
         case .diagnostics:
             MonogramDiagnostics.shared.isEnabled = value
+        case .openStars:
+            pushControllerImpl?(monogramStarsController(context: context))
         case .openClaude:
             pushControllerImpl?(monogramClaudeController(context: context))
         case .cycleTranslation:
@@ -369,7 +373,7 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
     )
     |> map { presentationData, _ -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Monogram"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: monogramSettingsEntries(), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: monogramSettingsEntries(accountId: context.account.peerId.toInt64()), style: .blocks, animateChanges: false)
         return (controllerState, (listState, arguments))
     }
 
