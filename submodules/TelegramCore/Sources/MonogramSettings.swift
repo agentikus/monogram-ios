@@ -40,6 +40,30 @@ public final class MonogramSettings {
     private let readPushLock = NSLock()
     private var readPushAllowedPeers = Set<Int64>()
     
+    private let hotLock = NSLock()
+    private var hotCache: [String: Bool] = [:]
+    
+    private func cachedBool(_ key: String, _ fallback: Bool) -> Bool {
+        self.hotLock.lock()
+        if let value = self.hotCache[key] {
+            self.hotLock.unlock()
+            return value
+        }
+        self.hotLock.unlock()
+        let value = (self.defaults.object(forKey: key) as? Bool) ?? fallback
+        self.hotLock.lock()
+        self.hotCache[key] = value
+        self.hotLock.unlock()
+        return value
+    }
+    
+    private func storeCachedBool(_ key: String, _ value: Bool) {
+        self.hotLock.lock()
+        self.hotCache[key] = value
+        self.hotLock.unlock()
+        self.defaults.set(value, forKey: key)
+    }
+    
     private init() {}
     
     private var ownPeerIds = Set<Int64>()
@@ -285,10 +309,10 @@ public final class MonogramSettings {
     
     public var peekSelfDestructing: Bool {
         get {
-            return (defaults.object(forKey: "monogram_peekSelfDestructing") as? Bool) ?? true
+            return self.cachedBool("monogram_peekSelfDestructing", true)
         }
         set {
-            defaults.set(newValue, forKey: "monogram_peekSelfDestructing")
+            self.storeCachedBool("monogram_peekSelfDestructing", newValue)
         }
     }
     
@@ -410,19 +434,19 @@ public final class MonogramSettings {
     
     public var ignoreCopyProtection: Bool {
         get {
-            return (defaults.object(forKey: "monogram_ignoreCopyProtection") as? Bool) ?? true
+            return self.cachedBool("monogram_ignoreCopyProtection", true)
         }
         set {
-            defaults.set(newValue, forKey: "monogram_ignoreCopyProtection")
+            self.storeCachedBool("monogram_ignoreCopyProtection", newValue)
         }
     }
     
     public var hidePremiumStatuses: Bool {
         get {
-            return (defaults.object(forKey: hidePremiumStatusesKey) as? Bool) ?? false
+            return self.cachedBool(hidePremiumStatusesKey, false)
         }
         set {
-            defaults.set(newValue, forKey: hidePremiumStatusesKey)
+            self.storeCachedBool(hidePremiumStatusesKey, newValue)
         }
     }
     
@@ -502,19 +526,19 @@ public final class MonogramSettings {
     
     public var disableAds: Bool {
         get {
-            return (defaults.object(forKey: disableAdsKey) as? Bool) ?? true
+            return self.cachedBool(disableAdsKey, true)
         }
         set {
-            defaults.set(newValue, forKey: disableAdsKey)
+            self.storeCachedBool(disableAdsKey, newValue)
         }
     }
     
     public var localPremium: Bool {
         get {
-            return (defaults.object(forKey: localPremiumKey) as? Bool) ?? true
+            return self.cachedBool(localPremiumKey, true)
         }
         set {
-            defaults.set(newValue, forKey: localPremiumKey)
+            self.storeCachedBool(localPremiumKey, newValue)
         }
     }
     

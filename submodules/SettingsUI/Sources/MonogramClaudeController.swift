@@ -8,13 +8,13 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 
-private struct MonogramClaudeMessage: Equatable {
+struct MonogramClaudeMessage: Equatable {
     let role: String
     let text: String
     var imageBase64: String? = nil
 }
 
-private final class MonogramPhotoPickerDelegate: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+final class MonogramPhotoPickerDelegate: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     private let completion: (UIImage?) -> Void
 
     init(completion: @escaping (UIImage?) -> Void) {
@@ -36,10 +36,10 @@ private final class MonogramPhotoPickerDelegate: NSObject, UIImagePickerControll
     }
 }
 
-private var monogramPhotoPickerHolder: MonogramPhotoPickerDelegate?
+var monogramPhotoPickerHolder: MonogramPhotoPickerDelegate?
 
 /// Уменьшает фото до 1568 px по длинной стороне и кодирует в JPEG base64 (меньше токенов и трафика).
-private func monogramEncodeImage(_ image: UIImage) -> String? {
+func monogramEncodeImage(_ image: UIImage) -> String? {
     let size = image.size
     if size.width < 1.0 || size.height < 1.0 {
         return nil
@@ -54,182 +54,7 @@ private func monogramEncodeImage(_ image: UIImage) -> String? {
     return rendered.jpegData(compressionQuality: 0.8)?.base64EncodedString()
 }
 
-private final class MonogramClaudeState {
-    var messages: [MonogramClaudeMessage] = []
-    var input: String = ""
-    var isLoading = false
-    var error: String?
-    var pendingImage: String?
-}
-
-private final class MonogramClaudeArguments {
-    let updateInput: (String) -> Void
-    let updateKey: (String) -> Void
-    let send: () -> Void
-    let clear: () -> Void
-    let copyLast: () -> Void
-    let cycleModel: () -> Void
-    let cycleEffort: () -> Void
-    let pickPhoto: () -> Void
-    let removePhoto: () -> Void
-
-    init(updateInput: @escaping (String) -> Void, updateKey: @escaping (String) -> Void, send: @escaping () -> Void, clear: @escaping () -> Void, copyLast: @escaping () -> Void, cycleModel: @escaping () -> Void, cycleEffort: @escaping () -> Void, pickPhoto: @escaping () -> Void, removePhoto: @escaping () -> Void) {
-        self.updateInput = updateInput
-        self.updateKey = updateKey
-        self.send = send
-        self.clear = clear
-        self.copyLast = copyLast
-        self.cycleModel = cycleModel
-        self.cycleEffort = cycleEffort
-        self.pickPhoto = pickPhoto
-        self.removePhoto = removePhoto
-    }
-}
-
-private enum MonogramClaudeEntry: ItemListNodeEntry {
-    case header(Int32, String)
-    case message(Int32, String, String)
-    case info(Int32, String)
-    case input(Int32, String)
-    case send(Int32, String, Bool)
-    case action(Int32, String, Int32)
-    case choice(Int32, String, String, Int32)
-    case key(Int32, String)
-
-    var section: ItemListSectionId {
-        return self.sortIndex / 1000
-    }
-
-    var stableId: Int32 {
-        return self.sortIndex
-    }
-
-    var sortIndex: Int32 {
-        switch self {
-        case let .header(index, _), let .message(index, _, _), let .info(index, _), let .input(index, _), let .send(index, _, _), let .action(index, _, _), let .choice(index, _, _, _), let .key(index, _):
-            return index
-        }
-    }
-
-    static func ==(lhs: MonogramClaudeEntry, rhs: MonogramClaudeEntry) -> Bool {
-        switch (lhs, rhs) {
-        case let (.header(a, b), .header(c, d)):
-            return a == c && b == d
-        case let (.message(a, b, c), .message(d, e, f)):
-            return a == d && b == e && c == f
-        case let (.info(a, b), .info(c, d)):
-            return a == c && b == d
-        case let (.input(a, b), .input(c, d)):
-            return a == c && b == d
-        case let (.send(a, b, c), .send(d, e, f)):
-            return a == d && b == e && c == f
-        case let (.action(a, b, c), .action(d, e, f)):
-            return a == d && b == e && c == f
-        case let (.choice(a, b, c, d), .choice(e, f, g, h)):
-            return a == e && b == f && c == g && d == h
-        case let (.key(a, b), .key(c, d)):
-            return a == c && b == d
-        default:
-            return false
-        }
-    }
-
-    static func <(lhs: MonogramClaudeEntry, rhs: MonogramClaudeEntry) -> Bool {
-        return lhs.sortIndex < rhs.sortIndex
-    }
-
-    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
-        let arguments = arguments as! MonogramClaudeArguments
-        switch self {
-        case let .header(_, text):
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .message(_, role, text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain("\(role)\n\(text)"), sectionId: self.section, textSize: .larger)
-        case let .info(_, text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .input(_, text):
-            return ItemListMultilineInputItem(presentationData: presentationData, systemStyle: .glass, text: text, placeholder: "Сообщение для Claude", maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { value in
-                arguments.updateInput(value)
-            })
-        case let .send(_, title, isLoading):
-            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: isLoading ? .disabled : .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                if !isLoading {
-                    arguments.send()
-                }
-            })
-        case let .action(_, title, tag):
-            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: tag == 1 ? .destructive : .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                switch tag {
-                case 1:
-                    arguments.clear()
-                case 2:
-                    arguments.pickPhoto()
-                case 3:
-                    arguments.removePhoto()
-                default:
-                    arguments.copyLast()
-                }
-            })
-        case let .choice(_, title, label, tag):
-            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: label, sectionId: self.section, style: .blocks, action: {
-                if tag == 0 {
-                    arguments.cycleModel()
-                } else {
-                    arguments.cycleEffort()
-                }
-            })
-        case let .key(_, text):
-            return ItemListSingleLineInputItem(presentationData: presentationData, systemStyle: .glass, title: NSAttributedString(string: "Ключ API"), text: text, placeholder: "sk-ant-…", type: .password, spacing: 10.0, sectionId: self.section, textUpdated: { value in
-                arguments.updateKey(value)
-            }, action: {})
-        }
-    }
-}
-
-private func monogramClaudeEntries(state: MonogramClaudeState) -> [MonogramClaudeEntry] {
-    let settings = MonogramSettings.shared
-    var entries: [MonogramClaudeEntry] = []
-
-    entries.append(.header(0, "ДИАЛОГ"))
-    if state.messages.isEmpty {
-        entries.append(.info(1, "Задайте вопрос ниже, при желании прикрепив фото. История хранится только на экране и пропадает при закрытии. Фото отправляется только вместе с тем сообщением, к которому прикреплено."))
-    }
-    for (index, message) in state.messages.enumerated() {
-        entries.append(.message(10 + Int32(index), message.role == "user" ? "Вы" : "Claude", (message.imageBase64 != nil ? "📷 " : "") + message.text))
-    }
-    if state.isLoading {
-        entries.append(.info(900, "Claude отвечает…"))
-    }
-    if let error = state.error {
-        entries.append(.info(901, "Ошибка: \(error)"))
-    }
-
-    entries.append(.input(1000, state.input))
-    if state.pendingImage == nil {
-        entries.append(.action(1001, "Прикрепить фото", 2))
-    } else {
-        entries.append(.action(1001, "Фото прикреплено — убрать", 3))
-    }
-    entries.append(.send(1002, state.isLoading ? "Отправка…" : "Отправить", state.isLoading))
-    if state.messages.last?.role == "assistant" {
-        entries.append(.action(1003, "Скопировать последний ответ", 0))
-    }
-    if !state.messages.isEmpty {
-        entries.append(.action(1004, "Очистить диалог", 1))
-    }
-
-    let modelTitle = MonogramSettings.claudeModels.first(where: { $0.id == settings.claudeModel })?.title ?? settings.claudeModel
-    let effortTitle = MonogramSettings.claudeEfforts.first(where: { $0.id == settings.claudeEffort })?.title ?? settings.claudeEffort
-    entries.append(.header(2000, "НАСТРОЙКИ"))
-    entries.append(.key(2001, settings.claudeApiKey))
-    entries.append(.choice(2002, "Модель", modelTitle, 0))
-    entries.append(.choice(2003, "Усилие", effortTitle, 1))
-    entries.append(.info(2004, "Ключ хранится только на этом устройстве и отправляется только на api.anthropic.com. Текст запросов оплачивается с вашего баланса Anthropic. «Усилие» — параметр effort API: чем выше, тем глубже рассуждение модели, дольше ответ и больше расход токенов."))
-
-    return entries
-}
-
-private func monogramClaudeSend(apiKey: String, model: String, effort: String, messages: [MonogramClaudeMessage], completion: @escaping (Result<String, MonogramClaudeError>) -> Void) {
+func monogramClaudeSend(apiKey: String, model: String, effort: String, messages: [MonogramClaudeMessage], completion: @escaping (Result<String, MonogramClaudeError>) -> Void) {
     guard let url = URL(string: "https://api.anthropic.com/v1/messages") else {
         completion(.failure(MonogramClaudeError(text: "Неверный адрес API")))
         return
@@ -315,12 +140,95 @@ private func monogramClaudeHandleContent(json: [String: Any], completion: @escap
     }
 }
 
-private struct MonogramClaudeError: Error {
+struct MonogramClaudeError: Error {
     let text: String
 }
 
-public func monogramClaudeController(context: AccountContext) -> ViewController {
-    let state = MonogramClaudeState()
+private final class MonogramClaudeSettingsArguments {
+    let updateKey: (String) -> Void
+    let cycleModel: () -> Void
+    let cycleEffort: () -> Void
+    let clear: () -> Void
+
+    init(updateKey: @escaping (String) -> Void, cycleModel: @escaping () -> Void, cycleEffort: @escaping () -> Void, clear: @escaping () -> Void) {
+        self.updateKey = updateKey
+        self.cycleModel = cycleModel
+        self.cycleEffort = cycleEffort
+        self.clear = clear
+    }
+}
+
+private enum MonogramClaudeSettingsEntry: ItemListNodeEntry {
+    case header(Int32, String)
+    case info(Int32, String)
+    case action(Int32, String)
+    case choice(Int32, String, String, Int32)
+    case key(Int32, String)
+
+    var section: ItemListSectionId {
+        return 0
+    }
+
+    var stableId: Int32 {
+        return self.sortIndex
+    }
+
+    var sortIndex: Int32 {
+        switch self {
+        case let .header(index, _), let .info(index, _), let .action(index, _), let .choice(index, _, _, _), let .key(index, _):
+            return index
+        }
+    }
+
+    static func ==(lhs: MonogramClaudeSettingsEntry, rhs: MonogramClaudeSettingsEntry) -> Bool {
+        switch (lhs, rhs) {
+        case let (.header(a, b), .header(c, d)):
+            return a == c && b == d
+        case let (.info(a, b), .info(c, d)):
+            return a == c && b == d
+        case let (.action(a, b), .action(c, d)):
+            return a == c && b == d
+        case let (.choice(a, b, c, d), .choice(e, f, g, h)):
+            return a == e && b == f && c == g && d == h
+        case let (.key(a, b), .key(c, d)):
+            return a == c && b == d
+        default:
+            return false
+        }
+    }
+
+    static func <(lhs: MonogramClaudeSettingsEntry, rhs: MonogramClaudeSettingsEntry) -> Bool {
+        return lhs.sortIndex < rhs.sortIndex
+    }
+
+    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
+        let arguments = arguments as! MonogramClaudeSettingsArguments
+        switch self {
+        case let .header(_, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .info(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .action(_, title):
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.clear()
+            })
+        case let .choice(_, title, label, tag):
+            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: label, sectionId: self.section, style: .blocks, action: {
+                if tag == 0 {
+                    arguments.cycleModel()
+                } else {
+                    arguments.cycleEffort()
+                }
+            })
+        case let .key(_, text):
+            return ItemListSingleLineInputItem(presentationData: presentationData, systemStyle: .glass, title: NSAttributedString(string: "Ключ API"), text: text, placeholder: "sk-ant-…", type: .password, spacing: 10.0, sectionId: self.section, textUpdated: { value in
+                arguments.updateKey(value)
+            }, action: {})
+        }
+    }
+}
+
+public func monogramClaudeSettingsController(context: AccountContext, clearHistory: @escaping () -> Void) -> ViewController {
     let refresh = ValuePromise<Int>(0, ignoreRepeated: false)
     var refreshCounter = 0
     let update = {
@@ -328,54 +236,8 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
         refresh.set(refreshCounter)
     }
 
-    let arguments = MonogramClaudeArguments(updateInput: { value in
-        state.input = value
-    }, updateKey: { value in
+    let arguments = MonogramClaudeSettingsArguments(updateKey: { value in
         MonogramSettings.shared.claudeApiKey = value.trimmingCharacters(in: .whitespacesAndNewlines)
-    }, send: {
-        let settings = MonogramSettings.shared
-        let image = state.pendingImage
-        let rawText = state.input.trimmingCharacters(in: .whitespacesAndNewlines)
-        if rawText.isEmpty && image == nil {
-            return
-        }
-        let text = rawText.isEmpty ? "Что на фото?" : rawText
-        if settings.claudeApiKey.isEmpty {
-            state.error = "введите ключ API в настройках ниже"
-            update()
-            return
-        }
-        state.error = nil
-        state.messages.append(MonogramClaudeMessage(role: "user", text: text, imageBase64: image))
-        state.input = ""
-        state.pendingImage = nil
-        state.isLoading = true
-        update()
-        monogramClaudeSend(apiKey: settings.claudeApiKey, model: settings.claudeModel, effort: settings.claudeEffort, messages: state.messages, completion: { result in
-            Queue.mainQueue().async {
-                state.isLoading = false
-                switch result {
-                case let .success(answer):
-                    state.messages.append(MonogramClaudeMessage(role: "assistant", text: answer))
-                    settings.claudeLastPreview = String(answer.prefix(200)).replacingOccurrences(of: "\n", with: " ")
-                    settings.claudeLastTimestamp = Int32(Date().timeIntervalSince1970)
-                case let .failure(error):
-                    state.messages.removeLast()
-                    state.input = text
-                    state.pendingImage = image
-                    state.error = error.text
-                }
-                update()
-            }
-        })
-    }, clear: {
-        state.messages = []
-        state.error = nil
-        update()
-    }, copyLast: {
-        if let last = state.messages.last(where: { $0.role == "assistant" }) {
-            UIPasteboard.general.string = last.text
-        }
     }, cycleModel: {
         let settings = MonogramSettings.shared
         let models = MonogramSettings.claudeModels
@@ -388,24 +250,8 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
         let index = efforts.firstIndex(where: { $0.id == settings.claudeEffort }) ?? 0
         settings.claudeEffort = efforts[(index + 1) % efforts.count].id
         update()
-    }, pickPhoto: {
-        let picker = UIImagePickerController()
-        picker.sourceType = .photoLibrary
-        let delegate = MonogramPhotoPickerDelegate(completion: { image in
-            if let image = image, let encoded = monogramEncodeImage(image) {
-                state.pendingImage = encoded
-                state.error = nil
-            } else if image != nil {
-                state.error = "не удалось подготовить фото"
-            }
-            update()
-        })
-        monogramPhotoPickerHolder = delegate
-        picker.delegate = delegate
-        context.sharedContext.mainWindow?.presentNative(picker)
-    }, removePhoto: {
-        state.pendingImage = nil
-        update()
+    }, clear: {
+        clearHistory()
     })
 
     let signal = combineLatest(queue: .mainQueue(),
@@ -413,8 +259,19 @@ public func monogramClaudeController(context: AccountContext) -> ViewController 
         refresh.get()
     )
     |> map { presentationData, _ -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Claude"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: monogramClaudeEntries(state: state), style: .blocks, animateChanges: false)
+        let settings = MonogramSettings.shared
+        let modelTitle = MonogramSettings.claudeModels.first(where: { $0.id == settings.claudeModel })?.title ?? settings.claudeModel
+        let effortTitle = MonogramSettings.claudeEfforts.first(where: { $0.id == settings.claudeEffort })?.title ?? settings.claudeEffort
+        var entries: [MonogramClaudeSettingsEntry] = []
+        entries.append(.header(0, "НАСТРОЙКИ"))
+        entries.append(.key(1, settings.claudeApiKey))
+        entries.append(.choice(2, "Модель", modelTitle, 0))
+        entries.append(.choice(3, "Усилие", effortTitle, 1))
+        entries.append(.info(4, "Ключ хранится только на этом устройстве и отправляется только на api.anthropic.com. Текст запросов оплачивается с вашего баланса Anthropic. «Усилие» — параметр effort API: чем выше, тем глубже рассуждение модели, дольше ответ и больше расход токенов."))
+        entries.append(.action(5, "Очистить диалог"))
+
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Настройки Claude"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, animateChanges: false)
         return (controllerState, (listState, arguments))
     }
 
