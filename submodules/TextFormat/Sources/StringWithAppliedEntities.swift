@@ -558,6 +558,12 @@ private func monogramFilterZalgo(_ string: NSMutableAttributedString) {
     for scalar in string.string.unicodeScalars {
         let length = scalar.utf16.count
         let value = scalar.value
+        // Латиница, греческий и кириллица без U+0483...U+0489 не содержат ни управляющих символов направления, ни объединяющих знаков.
+        if value < 0x300 || (value >= 0x370 && value < 0x483) || (value > 0x489 && value < 0x591) {
+            combiningRun = 0
+            offset += length
+            continue
+        }
         let isBidiControl = (value >= 0x202A && value <= 0x202E) || (value >= 0x2066 && value <= 0x2069)
         let category = scalar.properties.generalCategory
         let isCombining = category == .nonspacingMark || category == .enclosingMark
