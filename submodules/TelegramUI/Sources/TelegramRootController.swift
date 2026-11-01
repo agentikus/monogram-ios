@@ -9,6 +9,7 @@ import AccountContext
 import ContactListUI
 import CallListUI
 import ChatListUI
+import MonogramDiagnostics
 import SettingsUI
 import AppBundle
 import DatePickerNode
@@ -247,6 +248,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             guard let self else {
                 return
             }
+            MonogramDiagnostics.shared.log("action", "открыт экран Claude из списка чатов")
             self.pushViewController(monogramClaudeController(context: self.context))
         }
         self.pushViewController(tabBarController, animated: false)

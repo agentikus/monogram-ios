@@ -175,6 +175,7 @@ swift_library(
         "//submodules/PasscodeUI:PasscodeUI",
         "//submodules/CallListUI:CallListUI",
         "//submodules/ChatListUI:ChatListUI",
+        "//submodules/MonogramDiagnostics:MonogramDiagnostics",
         "//submodules/ChatTitleActivityNode:ChatTitleActivityNode",
         "//submodules/DeleteChatPeerActionSheetItem:DeleteChatPeerActionSheetItem",
         "//submodules/LanguageSuggestionUI:LanguageSuggestionUI",

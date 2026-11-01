@@ -3,6 +3,7 @@ import UIKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import MonogramDiagnostics
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -83,6 +84,7 @@ private enum MonogramSettingsOption: Int32 {
     case hideGreetingSticker
     case filterZalgo
     case showClaudeChat
+    case diagnostics
     case openClaude
 }
 
@@ -218,9 +220,12 @@ private func monogramSettingsEntries() -> [MonogramSettingsEntry] {
     entries.append(.footer(502, "Удалённые и изменённые сообщения, одноразовые медиа записываются по чатам (имя, username и ID) в папку Monogram в приложении «Файлы» → «На iPhone». Если выбрать свою папку, копия будет дублироваться и туда и переживёт удаление приложения."))
 
     entries.append(.header(450, "ИИ"))
-    entries.append(.toggle(453, .showClaudeChat, "Показывать чат Claude в списке чатов", settings.showClaudeChat))
     entries.append(.choice(451, .openClaude, "Чат с Claude", settings.claudeApiKey.isEmpty ? "нет ключа" : "готов"))
-    entries.append(.footer(452, "Свой ключ API Anthropic, выбор модели и усилия. Ключ хранится только на устройстве."))
+    entries.append(.toggle(452, .showClaudeChat, "Показывать чат Claude в списке чатов", settings.showClaudeChat))
+    entries.append(.footer(453, "Свой ключ API Anthropic, выбор модели и усилия. Ключ хранится только на устройстве."))
+    entries.append(.header(600, "ДИАГНОСТИКА"))
+    entries.append(.toggle(601, .diagnostics, "Журнал нагрева, нагрузки и ошибок", MonogramDiagnostics.shared.isEnabled))
+    entries.append(.footer(602, "Пишет нагрев, нагрузку процессора, память, зависания, ошибки и действия в файлы Logs: Файлы → На iPhone → Monogram → Logs, и копирует в папку архива, если она выбрана (подойдёт папка в iCloud Drive). Файлы старше 7 дней удаляются. Выключено — ничего не пишется."))
 
     entries.append(.header(400, "ДОПОЛНИТЕЛЬНО"))
     entries.append(.toggle(401, .useScheduled, "Отправлять как запланированные (призрак)", settings.useScheduledMessages))
@@ -246,6 +251,7 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
 
     let arguments = MonogramSettingsControllerArguments(toggle: { option, value in
         let settings = MonogramSettings.shared
+        MonogramDiagnostics.shared.log("settings", "\(option) = \(value)")
         switch option {
         case .ghostMode:
             settings.isGhostModeActive = value
@@ -338,6 +344,8 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             settings.filterZalgo = value
         case .showClaudeChat:
             settings.showClaudeChat = value
+        case .diagnostics:
+            MonogramDiagnostics.shared.isEnabled = value
         case .openClaude:
             pushControllerImpl?(monogramClaudeController(context: context))
         case .cycleTranslation:

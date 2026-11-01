@@ -2,6 +2,7 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
+import MonogramDiagnostics
 import UserNotifications
 import Intents
 import Postbox
@@ -349,6 +350,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
+        MonogramDiagnostics.shared.start()
         
         let _ = voipTokenPromise.get().start(next: { token in
             self.voipDeviceToken.set(.single(token))
