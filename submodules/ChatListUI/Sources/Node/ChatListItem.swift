@@ -614,6 +614,10 @@ public class ChatListItem: ListViewItem {
         case .loading:
             break
         case let .peer(peerData):
+            if peerData.peer.peerId == monogramClaudePeerId {
+                monogramClaudeOpenHandler?()
+                return
+            }
             if let message = peerData.messages.last, let peer = peerData.peer.peer {
                 if case .community = peer {
                     self.interaction.peerSelected(peer, nil, nil, peerData.promoInfo, false)
