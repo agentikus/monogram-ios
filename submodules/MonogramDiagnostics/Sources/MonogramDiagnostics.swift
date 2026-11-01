@@ -27,6 +27,10 @@ public final class MonogramDiagnostics: NSObject {
     private var observers: [NSObjectProtocol] = []
     private var sampleTimer: DispatchSourceTimer?
     private var watchdogTimer: DispatchSourceTimer?
+    private var externalPending = ""
+    private var externalPendingName = ""
+    private var externalFlushScheduled = false
+    private static let urgentCategories: Set<String> = ["app", "hang", "memory", "thermal", "power", "crash", "diag"]
 
     private var externalBookmark: Data?
     private var externalRoot: URL?
@@ -230,7 +234,7 @@ public final class MonogramDiagnostics: NSObject {
         self.sampleTimer = sampler
 
         let watchdog = DispatchSource.makeTimerSource(queue: self.queue)
-        watchdog.schedule(deadline: .now() + 1.0, repeating: 1.0, leeway: .milliseconds(200))
+        watchdog.schedule(deadline: .now() + 1.0, repeating: 1.0, leeway: .milliseconds(500))
         watchdog.setEventHandler { [weak self] in
             self?.watchdogTick()
         }
@@ -604,8 +608,34 @@ public final class MonogramDiagnostics: NSObject {
         let line = "[\(self.lineFormatter.string(from: date))] [\(category)] \(message)\n"
         let name = "monogram-\(day).log"
         self.append(line, to: self.localLogsDirectory().appendingPathComponent(name))
+        // Копия в iCloud Drive пишется пачками: каждая запись туда будит системную синхронизацию.
+        if self.externalPendingName != name {
+            self.flushExternal()
+            self.externalPendingName = name
+        }
+        self.externalPending += line
+        if MonogramDiagnostics.urgentCategories.contains(category) || self.externalPending.utf8.count > 16384 {
+            self.flushExternal()
+        } else if !self.externalFlushScheduled {
+            self.externalFlushScheduled = true
+            self.queue.asyncAfter(deadline: .now() + 30.0) { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.externalFlushScheduled = false
+                self.flushExternal()
+            }
+        }
+    }
+
+    private func flushExternal() {
+        if self.externalPending.isEmpty {
+            return
+        }
+        let text = self.externalPending
+        self.externalPending = ""
         if let external = self.externalLogsDirectory() {
-            self.append(line, to: external.appendingPathComponent(name))
+            self.append(text, to: external.appendingPathComponent(self.externalPendingName))
         }
     }
 

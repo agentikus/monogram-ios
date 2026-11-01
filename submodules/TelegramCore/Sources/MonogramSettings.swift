@@ -42,6 +42,7 @@ public final class MonogramSettings {
     
     private let hotLock = NSLock()
     private var hotCache: [String: Bool] = [:]
+    private var hotStringCache: [String: String] = [:]
     
     private func cachedBool(_ key: String, _ fallback: Bool) -> Bool {
         self.hotLock.lock()
@@ -57,6 +58,20 @@ public final class MonogramSettings {
         return value
     }
     
+    private func cachedString(_ key: String, _ fallback: String) -> String {
+        self.hotLock.lock()
+        if let value = self.hotStringCache[key] {
+            self.hotLock.unlock()
+            return value
+        }
+        self.hotLock.unlock()
+        let value = self.defaults.string(forKey: key) ?? fallback
+        self.hotLock.lock()
+        self.hotStringCache[key] = value
+        self.hotLock.unlock()
+        return value
+    }
+    
     private func storeCachedBool(_ key: String, _ value: Bool) {
         self.hotLock.lock()
         self.hotCache[key] = value
@@ -64,7 +79,18 @@ public final class MonogramSettings {
         self.defaults.set(value, forKey: key)
     }
     
-    private init() {}
+    private init() {
+        // Любая запись в UserDefaults (в том числе из экранов настроек) сбрасывает кэш: значения перечитаются при следующем обращении.
+        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: nil) { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.hotLock.lock()
+            self.hotCache.removeAll()
+            self.hotStringCache.removeAll()
+            self.hotLock.unlock()
+        }
+    }
     
     private var ownPeerIds = Set<Int64>()
     
@@ -134,7 +160,7 @@ public final class MonogramSettings {
     
     public var sendOnline: Bool {
         get {
-            return (defaults.object(forKey: sendOnlineKey) as? Bool) ?? false
+            return self.cachedBool(sendOnlineKey, false)
         }
         set {
             defaults.set(newValue, forKey: sendOnlineKey)
@@ -143,7 +169,7 @@ public final class MonogramSettings {
     
     public var sendTyping: Bool {
         get {
-            return (defaults.object(forKey: sendTypingKey) as? Bool) ?? false
+            return self.cachedBool(sendTypingKey, false)
         }
         set {
             defaults.set(newValue, forKey: sendTypingKey)
@@ -152,7 +178,7 @@ public final class MonogramSettings {
     
     public var sendReadMessages: Bool {
         get {
-            return (defaults.object(forKey: sendReadMessagesKey) as? Bool) ?? false
+            return self.cachedBool(sendReadMessagesKey, false)
         }
         set {
             defaults.set(newValue, forKey: sendReadMessagesKey)
@@ -161,7 +187,7 @@ public final class MonogramSettings {
     
     public var sendReadStories: Bool {
         get {
-            return (defaults.object(forKey: sendReadStoriesKey) as? Bool) ?? false
+            return self.cachedBool(sendReadStoriesKey, false)
         }
         set {
             defaults.set(newValue, forKey: sendReadStoriesKey)
@@ -170,7 +196,7 @@ public final class MonogramSettings {
     
     public var saveDeletedMessages: Bool {
         get {
-            return (defaults.object(forKey: saveDeletedMessagesKey) as? Bool) ?? true
+            return self.cachedBool(saveDeletedMessagesKey, true)
         }
         set {
             defaults.set(newValue, forKey: saveDeletedMessagesKey)
@@ -179,7 +205,7 @@ public final class MonogramSettings {
     
     public var markEditedMessages: Bool {
         get {
-            return (defaults.object(forKey: markEditedMessagesKey) as? Bool) ?? true
+            return self.cachedBool(markEditedMessagesKey, true)
         }
         set {
             defaults.set(newValue, forKey: markEditedMessagesKey)
@@ -188,7 +214,7 @@ public final class MonogramSettings {
     
     public var confirmVoiceAndVideo: Bool {
         get {
-            return (defaults.object(forKey: confirmVoiceAndVideoKey) as? Bool) ?? true
+            return self.cachedBool(confirmVoiceAndVideoKey, true)
         }
         set {
             defaults.set(newValue, forKey: confirmVoiceAndVideoKey)
@@ -197,7 +223,7 @@ public final class MonogramSettings {
     
     public var saveSelfDestructingMedia: Bool {
         get {
-            return (defaults.object(forKey: saveSelfDestructingMediaKey) as? Bool) ?? true
+            return self.cachedBool(saveSelfDestructingMediaKey, true)
         }
         set {
             defaults.set(newValue, forKey: saveSelfDestructingMediaKey)
@@ -208,7 +234,7 @@ public final class MonogramSettings {
     
     public var removeMessageTail: Bool {
         get {
-            return (defaults.object(forKey: removeMessageTailKey) as? Bool) ?? false
+            return self.cachedBool(removeMessageTailKey, false)
         }
         set {
             defaults.set(newValue, forKey: removeMessageTailKey)
@@ -219,7 +245,7 @@ public final class MonogramSettings {
     
     public var burnedMark: String {
         get {
-            return defaults.string(forKey: "monogram_burnedMark") ?? MonogramSettings.burnedMarkPresets[0]
+            return self.cachedString("monogram_burnedMark", MonogramSettings.burnedMarkPresets[0])
         }
         set {
             defaults.set(newValue, forKey: "monogram_burnedMark")
@@ -228,7 +254,7 @@ public final class MonogramSettings {
     
     public var deletedMark: String {
         get {
-            return defaults.string(forKey: deletedMarkKey) ?? MonogramSettings.deletedMarkPresets[0]
+            return self.cachedString(deletedMarkKey, MonogramSettings.deletedMarkPresets[0])
         }
         set {
             defaults.set(newValue, forKey: deletedMarkKey)
@@ -237,7 +263,7 @@ public final class MonogramSettings {
     
     public var suggestGhostBeforeStory: Bool {
         get {
-            return (defaults.object(forKey: suggestGhostBeforeStoryKey) as? Bool) ?? true
+            return self.cachedBool(suggestGhostBeforeStoryKey, true)
         }
         set {
             defaults.set(newValue, forKey: suggestGhostBeforeStoryKey)
@@ -248,7 +274,7 @@ public final class MonogramSettings {
     
     public var disableStories: Bool {
         get {
-            return (defaults.object(forKey: disableStoriesKey) as? Bool) ?? false
+            return self.cachedBool(disableStoriesKey, false)
         }
         set {
             defaults.set(newValue, forKey: disableStoriesKey)
@@ -257,7 +283,7 @@ public final class MonogramSettings {
     
     public var editedMark: String {
         get {
-            return defaults.string(forKey: editedMarkKey) ?? MonogramSettings.editedMarkPresets[0]
+            return self.cachedString(editedMarkKey, MonogramSettings.editedMarkPresets[0])
         }
         set {
             defaults.set(newValue, forKey: editedMarkKey)
@@ -266,7 +292,7 @@ public final class MonogramSettings {
     
     public var sendSilentInGhost: Bool {
         get {
-            return (defaults.object(forKey: sendSilentInGhostKey) as? Bool) ?? false
+            return self.cachedBool(sendSilentInGhostKey, false)
         }
         set {
             defaults.set(newValue, forKey: sendSilentInGhostKey)
@@ -275,7 +301,7 @@ public final class MonogramSettings {
     
     public var showMessageSeconds: Bool {
         get {
-            return (defaults.object(forKey: showMessageSecondsKey) as? Bool) ?? false
+            return self.cachedBool(showMessageSecondsKey, false)
         }
         set {
             defaults.set(newValue, forKey: showMessageSecondsKey)
@@ -284,7 +310,7 @@ public final class MonogramSettings {
     
     public var showMessageDetails: Bool {
         get {
-            return (defaults.object(forKey: showMessageDetailsKey) as? Bool) ?? true
+            return self.cachedBool(showMessageDetailsKey, true)
         }
         set {
             defaults.set(newValue, forKey: showMessageDetailsKey)
@@ -293,7 +319,7 @@ public final class MonogramSettings {
     
     public var semiTransparentDeleted: Bool {
         get {
-            return (defaults.object(forKey: semiTransparentDeletedKey) as? Bool) ?? true
+            return self.cachedBool(semiTransparentDeletedKey, true)
         }
         set {
             defaults.set(newValue, forKey: semiTransparentDeletedKey)
@@ -302,7 +328,7 @@ public final class MonogramSettings {
     
     public var markReadAfterAction: Bool {
         get {
-            return (defaults.object(forKey: markReadAfterActionKey) as? Bool) ?? true
+            return self.cachedBool(markReadAfterActionKey, true)
         }
         set {
             defaults.set(newValue, forKey: markReadAfterActionKey)
@@ -320,7 +346,7 @@ public final class MonogramSettings {
     
     public var localTranscription: Bool {
         get {
-            return (defaults.object(forKey: "monogram_localTranscription") as? Bool) ?? true
+            return self.cachedBool("monogram_localTranscription", true)
         }
         set {
             defaults.set(newValue, forKey: "monogram_localTranscription")
@@ -328,7 +354,7 @@ public final class MonogramSettings {
     }
     
     private func boolValue(_ key: String, _ defaultValue: Bool) -> Bool {
-        return (self.defaults.object(forKey: key) as? Bool) ?? defaultValue
+        return self.cachedBool(key, defaultValue)
     }
 
     public var confirmStickersAndGifs: Bool {
@@ -411,7 +437,7 @@ public final class MonogramSettings {
     }
 
     public var showClaudeChat: Bool {
-        get { return (self.defaults.object(forKey: "monogram_showClaudeChat") as? Bool) ?? true }
+        get { return self.cachedBool("monogram_showClaudeChat", true) }
         set { self.defaults.set(newValue, forKey: "monogram_showClaudeChat") }
     }
 
@@ -427,7 +453,7 @@ public final class MonogramSettings {
 
     public var hideScreenshotNotifications: Bool {
         get {
-            return (defaults.object(forKey: "monogram_hideScreenshotNotifications") as? Bool) ?? true
+            return self.cachedBool("monogram_hideScreenshotNotifications", true)
         }
         set {
             defaults.set(newValue, forKey: "monogram_hideScreenshotNotifications")
@@ -454,7 +480,7 @@ public final class MonogramSettings {
     
     public var useScheduledMessages: Bool {
         get {
-            return (defaults.object(forKey: useScheduledMessagesKey) as? Bool) ?? false
+            return self.cachedBool(useScheduledMessagesKey, false)
         }
         set {
             defaults.set(newValue, forKey: useScheduledMessagesKey)
@@ -463,7 +489,7 @@ public final class MonogramSettings {
     
     public var filtersEnabled: Bool {
         get {
-            return (defaults.object(forKey: filtersEnabledKey) as? Bool) ?? true
+            return self.cachedBool(filtersEnabledKey, true)
         }
         set {
             defaults.set(newValue, forKey: filtersEnabledKey)
@@ -472,7 +498,7 @@ public final class MonogramSettings {
     
     public var hideNotificationBadge: Bool {
         get {
-            return (defaults.object(forKey: hideNotificationBadgeKey) as? Bool) ?? false
+            return self.cachedBool(hideNotificationBadgeKey, false)
         }
         set {
             defaults.set(newValue, forKey: hideNotificationBadgeKey)
@@ -481,7 +507,7 @@ public final class MonogramSettings {
     
     public var hideNotificationCounters: Bool {
         get {
-            return (defaults.object(forKey: hideNotificationCountersKey) as? Bool) ?? false
+            return self.cachedBool(hideNotificationCountersKey, false)
         }
         set {
             defaults.set(newValue, forKey: hideNotificationCountersKey)
@@ -490,7 +516,7 @@ public final class MonogramSettings {
     
     public var hideAllChatsFolder: Bool {
         get {
-            return (defaults.object(forKey: hideAllChatsFolderKey) as? Bool) ?? false
+            return self.cachedBool(hideAllChatsFolderKey, false)
         }
         set {
             defaults.set(newValue, forKey: hideAllChatsFolderKey)
@@ -499,7 +525,7 @@ public final class MonogramSettings {
     
     public var streamerMode: Bool {
         get {
-            return (defaults.object(forKey: streamerModeKey) as? Bool) ?? false
+            return self.cachedBool(streamerModeKey, false)
         }
         set {
             defaults.set(newValue, forKey: streamerModeKey)
@@ -508,7 +534,7 @@ public final class MonogramSettings {
     
     public var showPeerId: Bool {
         get {
-            return (defaults.object(forKey: showPeerIdKey) as? Bool) ?? true
+            return self.cachedBool(showPeerIdKey, true)
         }
         set {
             defaults.set(newValue, forKey: showPeerIdKey)

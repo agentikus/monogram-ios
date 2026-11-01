@@ -11,11 +11,25 @@ public final class MonogramFilters {
     
     private init() {}
     
+    private var cachedFilters: [String]?
+
     public var filters: [String] {
         get {
-            return self.defaults.stringArray(forKey: self.key) ?? []
+            self.lock.lock()
+            defer {
+                self.lock.unlock()
+            }
+            if let cachedFilters = self.cachedFilters {
+                return cachedFilters
+            }
+            let value = self.defaults.stringArray(forKey: self.key) ?? []
+            self.cachedFilters = value
+            return value
         }
         set {
+            self.lock.lock()
+            self.cachedFilters = newValue
+            self.lock.unlock()
             self.defaults.set(newValue, forKey: self.key)
         }
     }
