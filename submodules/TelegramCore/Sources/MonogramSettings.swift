@@ -542,6 +542,46 @@ public final class MonogramSettings {
         }
     }
     
+    public enum GhostFlag: String {
+        case online
+        case typing
+        case readMessages
+        case readStories
+    }
+
+    private func ghostLegacyValue(_ flag: GhostFlag) -> Bool {
+        switch flag {
+        case .online:
+            return self.sendOnline
+        case .typing:
+            return self.sendTyping
+        case .readMessages:
+            return self.sendReadMessages
+        case .readStories:
+            return self.sendReadStories
+        }
+    }
+
+    /// Отправлять ли данные этого вида с данного аккаунта. Режим призрака у каждого аккаунта свой;
+    /// пока для аккаунта ничего не выбрано, действует прежнее общее значение.
+    public func sends(_ flag: GhostFlag, accountId: Int64) -> Bool {
+        return self.cachedBool("monogram_ghost_\(flag.rawValue)_\(accountId)", self.ghostLegacyValue(flag))
+    }
+
+    public func setSends(_ flag: GhostFlag, accountId: Int64, _ value: Bool) {
+        self.storeCachedBool("monogram_ghost_\(flag.rawValue)_\(accountId)", value)
+    }
+
+    public func isGhostModeActive(accountId: Int64) -> Bool {
+        return !self.sends(.online, accountId: accountId) && !self.sends(.typing, accountId: accountId) && !self.sends(.readMessages, accountId: accountId) && !self.sends(.readStories, accountId: accountId)
+    }
+
+    public func setGhostModeActive(accountId: Int64, _ active: Bool) {
+        for flag in [GhostFlag.online, .typing, .readMessages, .readStories] {
+            self.setSends(flag, accountId: accountId, !active)
+        }
+    }
+
     public var isGhostModeActive: Bool {
         get {
             return !sendOnline && !sendTyping && !sendReadMessages && !sendReadStories

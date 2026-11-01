@@ -61,8 +61,8 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         displaySetStatus = false
     }
     
-    items[.edit]!.append(PeerInfoScreenSwitchItem(id: 10, text: "Режим призрака", value: MonogramSettings.shared.isGhostModeActive, icon: PresentationResourcesSettings.premium, toggled: { value in
-        MonogramSettings.shared.isGhostModeActive = value
+    items[.edit]!.append(PeerInfoScreenSwitchItem(id: 10, text: "Режим призрака", value: MonogramSettings.shared.isGhostModeActive(accountId: context.account.peerId.toInt64()), icon: PresentationResourcesSettings.premium, toggled: { value in
+        MonogramSettings.shared.setGhostModeActive(accountId: context.account.peerId.toInt64(), value)
     }))
     
     if displaySetStatus {

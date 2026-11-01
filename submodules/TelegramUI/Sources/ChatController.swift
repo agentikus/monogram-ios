@@ -9033,9 +9033,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
         
     func transformEnqueueMessages(_ messages: [EnqueueMessage], silentPosting: Bool, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, postpone: Bool = false) -> [EnqueueMessage] {
-        let silentPosting = silentPosting || (MonogramSettings.shared.sendSilentInGhost && MonogramSettings.shared.isGhostModeActive)
+        let silentPosting = silentPosting || (MonogramSettings.shared.sendSilentInGhost && MonogramSettings.shared.isGhostModeActive(accountId: self.context.account.peerId.toInt64()))
         var scheduleTime = scheduleTime
-        if scheduleTime == nil, MonogramSettings.shared.useScheduledMessages, MonogramSettings.shared.isGhostModeActive, self.presentationInterfaceState.subject != .scheduledMessages, let peerId = self.chatLocation.peerId, peerId.namespace != Namespaces.Peer.SecretChat {
+        if scheduleTime == nil, MonogramSettings.shared.useScheduledMessages, MonogramSettings.shared.isGhostModeActive(accountId: self.context.account.peerId.toInt64()), self.presentationInterfaceState.subject != .scheduledMessages, let peerId = self.chatLocation.peerId, peerId.namespace != Namespaces.Peer.SecretChat {
             scheduleTime = Int32(Date().timeIntervalSince1970) + 12
         }
         if let peerId = self.chatLocation.peerId {

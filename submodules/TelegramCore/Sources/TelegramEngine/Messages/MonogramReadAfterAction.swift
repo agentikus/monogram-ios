@@ -4,7 +4,7 @@ import SwiftSignalKit
 
 public extension TelegramEngine.Messages {
     func monogramMarkReadAfterAction(peerId: EnginePeer.Id) -> Signal<Never, NoError> {
-        if MonogramSettings.shared.sendReadMessages || !MonogramSettings.shared.markReadAfterAction {
+        if MonogramSettings.shared.sends(.readMessages, accountId: self.account.peerId.toInt64()) || !MonogramSettings.shared.markReadAfterAction {
             return .complete()
         }
         let account = self.account

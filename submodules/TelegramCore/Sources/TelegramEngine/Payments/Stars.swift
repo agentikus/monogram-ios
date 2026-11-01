@@ -492,7 +492,7 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
                         nextTransactionsOffset: nextTransactionsOffset
                     )
                     if peerId == account.peerId {
-                        return MonogramLocalStars.shared.applying(to: parsedStatus, accountId: account.peerId.toInt64(), ton: ton, mode: mode, firstPage: offset == nil || offset == "")
+                        return MonogramLocalStars.shared.applying(to: parsedStatus, transaction: transaction, accountId: account.peerId.toInt64(), ton: ton, mode: mode, firstPage: offset == nil || offset == "")
                     }
                     return parsedStatus
                 }
@@ -552,7 +552,7 @@ private func _internal_requestStarsSubscriptions(account: Account, peerId: Engin
                         nextTransactionsOffset: nil
                     )
                     if peerId == account.peerId {
-                        return MonogramLocalStars.shared.applying(to: parsedStatus, accountId: account.peerId.toInt64(), missingBalance: missingBalance, firstPage: offset.isEmpty)
+                        return MonogramLocalStars.shared.applying(to: parsedStatus, transaction: transaction, accountId: account.peerId.toInt64(), missingBalance: missingBalance, firstPage: offset.isEmpty)
                     }
                     return parsedStatus
                 }

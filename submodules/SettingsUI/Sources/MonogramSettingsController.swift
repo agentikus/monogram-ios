@@ -176,11 +176,11 @@ private func monogramSettingsEntries(accountId: Int64) -> [MonogramSettingsEntry
     var entries: [MonogramSettingsEntry] = []
 
     entries.append(.header(0, "РЕЖИМ ПРИЗРАКА"))
-    entries.append(.toggle(1, .ghostMode, "Режим призрака", settings.isGhostModeActive))
-    entries.append(.toggle(2, .hideOnline, "Не показывать, что я в сети", !settings.sendOnline))
-    entries.append(.toggle(3, .hideTyping, "Не показывать «печатает…», запись и загрузку", !settings.sendTyping))
-    entries.append(.toggle(4, .hideReadMessages, "Не отмечать сообщения прочитанными", !settings.sendReadMessages))
-    entries.append(.toggle(5, .hideReadStories, "Не отмечать истории просмотренными", !settings.sendReadStories))
+    entries.append(.toggle(1, .ghostMode, "Режим призрака", settings.isGhostModeActive(accountId: accountId)))
+    entries.append(.toggle(2, .hideOnline, "Не показывать, что я в сети", !settings.sends(.online, accountId: accountId)))
+    entries.append(.toggle(3, .hideTyping, "Не показывать «печатает…», запись и загрузку", !settings.sends(.typing, accountId: accountId)))
+    entries.append(.toggle(4, .hideReadMessages, "Не отмечать сообщения прочитанными", !settings.sends(.readMessages, accountId: accountId)))
+    entries.append(.toggle(5, .hideReadStories, "Не отмечать истории просмотренными", !settings.sends(.readStories, accountId: accountId)))
     entries.append(.toggle(8, .markReadAfterAction, "Отмечать прочитанным после моего ответа", settings.markReadAfterAction))
     entries.append(.toggle(7, .silentInGhost, "Отправлять без звука в режиме призрака", settings.sendSilentInGhost))
     entries.append(.toggle(6, .suggestGhostStory, "Предлагать призрака перед просмотром истории", settings.suggestGhostBeforeStory))
@@ -249,6 +249,7 @@ private func monogramSettingsEntries(accountId: Int64) -> [MonogramSettingsEntry
 public func monogramSettingsController(context: AccountContext) -> ViewController {
     let refresh = ValuePromise<Int>(0, ignoreRepeated: false)
     var refreshCounter = 0
+    let accountId = context.account.peerId.toInt64()
     var pushControllerImpl: ((ViewController) -> Void)?
 
     let arguments = MonogramSettingsControllerArguments(toggle: { option, value in
@@ -256,15 +257,15 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
         MonogramDiagnostics.shared.log("settings", "\(option) = \(value)")
         switch option {
         case .ghostMode:
-            settings.isGhostModeActive = value
+            settings.setGhostModeActive(accountId: accountId, value)
         case .hideOnline:
-            settings.sendOnline = !value
+            settings.setSends(.online, accountId: accountId, !value)
         case .hideTyping:
-            settings.sendTyping = !value
+            settings.setSends(.typing, accountId: accountId, !value)
         case .hideReadMessages:
-            settings.sendReadMessages = !value
+            settings.setSends(.readMessages, accountId: accountId, !value)
         case .hideReadStories:
-            settings.sendReadStories = !value
+            settings.setSends(.readStories, accountId: accountId, !value)
         case .saveDeleted:
             settings.saveDeletedMessages = value
         case .markEdited:
