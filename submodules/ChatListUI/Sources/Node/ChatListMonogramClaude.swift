@@ -35,13 +35,15 @@ func monogramClaudeRenderedPeer() -> EngineRenderedPeer {
     return EngineRenderedPeer(peerId: monogramClaudePeerId, peers: [monogramClaudePeerId: peer], associatedMedia: [:])
 }
 
+private let monogramClaudeLaunchTimestamp = Int32(Date().timeIntervalSince1970)
+
 func monogramClaudeMessages() -> [EngineMessage] {
     let settings = MonogramSettings.shared
     let preview = settings.claudeLastPreview
     let text = preview.isEmpty ? "Задайте вопрос ИИ" : preview
     var timestamp = settings.claudeLastTimestamp
     if timestamp == 0 {
-        timestamp = Int32(Date().timeIntervalSince1970)
+        timestamp = monogramClaudeLaunchTimestamp
     }
     let message = EngineMessage(
         stableId: 1,
