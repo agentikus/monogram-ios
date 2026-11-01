@@ -84,7 +84,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
                     if let message = transaction.getMessage(entry.messageId) {
                         if message.id.peerId.namespace == Namespaces.Peer.SecretChat || isRemove {
                             _internal_deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
-                        } else if MonogramSettings.shared.keepsSelfDestructingMedia(message.id) {
+                        } else if MonogramSettings.shared.keepsSelfDestructingMedia(message.id, incoming: message.flags.contains(.Incoming)) {
                             transaction.clearTimestampBasedAttribute(id: entry.messageId, tag: tag)
                         } else {
                             transaction.updateMessage(message.id, update: { currentMessage in
@@ -93,7 +93,7 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                                 }
                                 var updatedMedia = currentMessage.media
-                                for i in 0 ..< (MonogramSettings.shared.keepsSelfDestructingMedia(message.id) ? 0 : updatedMedia.count) {
+                                for i in 0 ..< (MonogramSettings.shared.keepsSelfDestructingMedia(message.id, incoming: message.flags.contains(.Incoming)) ? 0 : updatedMedia.count) {
                                     if let _ = updatedMedia[i] as? TelegramMediaImage {
                                         updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
                                     } else if let file = updatedMedia[i] as? TelegramMediaFile {

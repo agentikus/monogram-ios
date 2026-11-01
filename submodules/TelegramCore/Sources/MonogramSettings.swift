@@ -108,8 +108,10 @@ public final class MonogramSettings {
         return self.burnedMessages!.contains(self.burnKey(id))
     }
     
-    func keepsSelfDestructingMedia(_ id: MessageId) -> Bool {
-        return self.saveSelfDestructingMedia && !self.isBurned(id)
+    /// Сохранение одноразового медиа касается только полученных сообщений: свои исходящие должны
+    /// исчезать у отправителя как обычно, иначе таймер зависает на 0 с, а просмотр не отображается.
+    func keepsSelfDestructingMedia(_ id: MessageId, incoming: Bool) -> Bool {
+        return incoming && self.saveSelfDestructingMedia && !self.isBurned(id)
     }
     
     func setReadPushAllowed(_ peerId: Int64, _ allowed: Bool) {
