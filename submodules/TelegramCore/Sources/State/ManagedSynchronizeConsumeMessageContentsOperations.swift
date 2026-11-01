@@ -110,13 +110,16 @@ func managedSynchronizeConsumeMessageContentOperations(postbox: Postbox, network
 }
 
 private func synchronizeConsumeMessageContents(transaction: Transaction, network: Network, stateManager: AccountStateManager, peerId: PeerId, operation: SynchronizeConsumeMessageContentsOperation) -> Signal<Void, NoError> {
+    monogramLogSink?("burn", "отправка отметки просмотра содержимого: чат \(peerId.namespace), сообщения \(operation.messageIds.map { $0.id })")
     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
         return network.request(Api.functions.messages.readMessageContents(id: operation.messageIds.map { $0.id }))
         |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.messages.AffectedMessages?, NoError> in
+        |> `catch` { error -> Signal<Api.messages.AffectedMessages?, NoError> in
+            monogramLogSink?("burn", "сервер отклонил отметку просмотра: \(error.errorDescription ?? "?")")
             return .single(nil)
         }
         |> mapToSignal { result -> Signal<Void, NoError> in
+            monogramLogSink?("burn", result == nil ? "отметка просмотра не доставлена" : "отметка просмотра доставлена")
             if let result = result {
                 switch result {
                     case let .affectedMessages(affectedMessagesData):
