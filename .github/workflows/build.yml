@@ -78,6 +78,7 @@ jobs:
           export APP_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["app"]);')
           export COMMIT_COUNT=$(git rev-list --count HEAD)
           export COMMIT_COUNT="$(($COMMIT_COUNT+$BUILD_NUMBER_OFFSET))"
+          if [ -f build_number_override ]; then COMMIT_COUNT="$(cat build_number_override)"; fi
           export BUILD_NUMBER="$COMMIT_COUNT"
           echo "BUILD_NUMBER=$(echo $BUILD_NUMBER)" >> $GITHUB_ENV
           echo "APP_VERSION=$(echo $APP_VERSION)" >> $GITHUB_ENV
@@ -91,7 +92,7 @@ jobs:
             --continueOnError \
             --configurationPath="build-system/appstore-configuration.json" \
             --codesigningInformationPath=build-system/fake-codesigning \
-            --configuration=release_arm64 \
+            --configuration=release_arm64             --generateDsym \
             --buildNumber="$BUILD_NUMBER"
 
           OUTPUT_PATH="build/artifacts"
@@ -103,6 +104,34 @@ jobs:
           fi
           echo "IPA: $IPA_PATH"
           cp "$IPA_PATH" $OUTPUT_PATH/Monogram.ipa
+
+      - name: Symbolicate hot frames
+        continue-on-error: true
+        run: |
+          cd /Users/Shared/telegram-ios
+          mkdir -p /tmp/dsyms && cd /tmp/dsyms
+          unzip -q -o /Users/Shared/telegram-ios/build/dsym-out/Telegram.DSYMs.zip || true
+          python3 - <<'PY'
+          import json, subprocess, glob, re, os
+          frames = json.load(open('/Users/Shared/telegram-ios/tools/hot_frames.json'))
+          byuuid = {}
+          for f in frames:
+              byuuid.setdefault(f['uuid'].upper(), []).append(f)
+          found = set()
+          for dwarf in glob.glob('/tmp/dsyms/**/Contents/Resources/DWARF/*', recursive=True):
+              out = subprocess.run(['dwarfdump', '--uuid', dwarf], capture_output=True, text=True).stdout
+              for m in re.finditer(r'UUID: ([0-9A-F-]+) \((\w+)\)', out):
+                  uuid, arch = m.group(1), m.group(2)
+                  print('DSYM', os.path.basename(dwarf), uuid, arch)
+                  if uuid not in byuuid or arch != 'arm64':
+                      continue
+                  found.add(uuid)
+                  for f in byuuid[uuid]:
+                      r = subprocess.run(['atos', '-o', dwarf, '-arch', 'arm64', '-l', '0x0', hex(f['offset'])], capture_output=True, text=True)
+                      print('HOT', f['samples'], os.path.basename(dwarf), hex(f['offset']), r.stdout.strip())
+          print('uuids wanted', sorted(byuuid))
+          print('uuids matched', sorted(found))
+          PY
 
       - name: Save Bazel Disk Cache
         uses: actions/cache/save@v4
