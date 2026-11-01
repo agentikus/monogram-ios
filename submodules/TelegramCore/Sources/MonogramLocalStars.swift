@@ -104,6 +104,18 @@ public final class MonogramLocalStars {
         }
     }
 
+    /// Настоящий пользователь, найденный по юзернейму, даёт строке только аватарку: имя в строке всегда то,
+    /// которое ввёл сам пользователь, а ник и остальные признаки настоящего аккаунта не переносятся.
+    func peer(_ real: Peer?, named name: String, seed: String) -> Peer {
+        guard let real = real else {
+            return self.fakePeer(seed: seed, name: name)
+        }
+        guard let user = real as? TelegramUser, !name.isEmpty else {
+            return real
+        }
+        return TelegramUser(id: user.id, accessHash: user.accessHash, firstName: name, lastName: nil, username: nil, phone: nil, photo: user.photo, botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: user.nameColor, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
+    }
+
     /// Выдуманный пользователь для названия в строке: у локальной записи нет настоящего собеседника.
     func fakePeer(seed: String, name: String) -> TelegramUser {
         var hash: UInt64 = 1469598103934665603
@@ -139,7 +151,7 @@ extension MonogramLocalStars {
                 case .all:
                     break
                 }
-                let peer: Peer = operation.peerId.flatMap { transaction.getPeer(PeerId($0)) } ?? self.fakePeer(seed: operation.id, name: operation.subtitle)
+                let peer: Peer = self.peer(operation.peerId.flatMap { transaction.getPeer(PeerId($0)) }, named: operation.subtitle, seed: operation.id)
                 let transaction = StarsContext.State.Transaction(flags: [], id: "monogram-local-" + operation.id, count: CurrencyAmount(amount: StarsAmount(value: operation.amount, nanos: 0), currency: .stars), date: operation.date, peer: .peer(EnginePeer(peer)), title: operation.title, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, giveawayMessageId: nil, media: [], subscriptionPeriod: nil, starGift: nil, floodskipNumber: nil, starrefCommissionPermille: nil, starrefPeerId: nil, starrefAmount: nil, paidMessageCount: nil, premiumGiftMonths: nil, adsProceedsFromDate: nil, adsProceedsToDate: nil)
                 transactions.append(transaction)
             }
@@ -161,7 +173,7 @@ extension MonogramLocalStars {
         var subscriptions = status.subscriptions
         if firstPage && !missingBalance {
             for item in self.subscriptions(accountId: accountId) {
-                let peer: Peer = item.peerId.flatMap { transaction.getPeer(PeerId($0)) } ?? self.fakePeer(seed: item.id, name: item.name)
+                let peer: Peer = self.peer(item.peerId.flatMap { transaction.getPeer(PeerId($0)) }, named: item.name, seed: item.id)
                 var flags: StarsContext.State.Subscription.Flags = []
                 if item.isCancelled {
                     flags.insert(.isCancelled)

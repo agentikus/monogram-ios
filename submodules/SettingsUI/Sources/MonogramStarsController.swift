@@ -224,7 +224,7 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
     }
 
     let askOperation: (MonogramLocalStarsOperation?) -> Void = { existing in
-        let alert = UIAlertController(title: existing == nil ? "Новая операция" : "Операция", message: "Название, подпись, сумма (минус — списание), дата дд.мм.гггг чч:мм (пусто — сейчас) и юзернейм, чья аватарка и имя покажутся (необязательно)", preferredStyle: .alert)
+        let alert = UIAlertController(title: existing == nil ? "Новая операция" : "Операция", message: "Название, подпись, сумма (минус — списание), дата дд.мм.гггг чч:мм (пусто — сейчас) и юзернейм (из него берётся только аватарка, необязательно)", preferredStyle: .alert)
         alert.addTextField { field in
             field.placeholder = "Название, например: Покупка подарка"
             field.text = existing?.title
