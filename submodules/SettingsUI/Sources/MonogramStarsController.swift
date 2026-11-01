@@ -14,8 +14,12 @@ private final class MonogramStarsControllerArguments {
     let editOperation: (String) -> Void
     let addSubscription: () -> Void
     let editSubscription: (String) -> Void
+    let addGift: () -> Void
+    let addTopUp: () -> Void
 
-    init(editBalance: @escaping () -> Void, addOperation: @escaping () -> Void, editOperation: @escaping (String) -> Void, addSubscription: @escaping () -> Void, editSubscription: @escaping (String) -> Void) {
+    init(editBalance: @escaping () -> Void, addOperation: @escaping () -> Void, editOperation: @escaping (String) -> Void, addSubscription: @escaping () -> Void, editSubscription: @escaping (String) -> Void, addGift: @escaping () -> Void, addTopUp: @escaping () -> Void) {
+        self.addGift = addGift
+        self.addTopUp = addTopUp
         self.editBalance = editBalance
         self.addOperation = addOperation
         self.editOperation = editOperation
@@ -83,9 +87,14 @@ private enum MonogramStarsEntry: ItemListNodeEntry {
             })
         case let .action(_, title, kind):
             return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                if kind == 0 {
+                switch kind {
+                case 0:
                     arguments.addOperation()
-                } else {
+                case 2:
+                    arguments.addGift()
+                case 3:
+                    arguments.addTopUp()
+                default:
                     arguments.addSubscription()
                 }
             })
@@ -157,7 +166,9 @@ private func monogramStarsEntries(accountId: Int64) -> [MonogramStarsEntry] {
 
     entries.append(.header(1000, "СВОИ ОПЕРАЦИИ"))
     entries.append(.action(1001, "Добавить операцию", 0))
-    var index: Int32 = 1002
+    entries.append(.action(1002, "Подарок из каталога", 2))
+    entries.append(.action(1003, "Пополнение звёзд", 3))
+    var index: Int32 = 1010
     for operation in store.operations(accountId: accountId).sorted(by: { $0.date > $1.date }) {
         entries.append(.operation(index, operation.id, operation.title + " · " + operation.subtitle, monogramStarsSignedText(operation.amount)))
         index += 1
@@ -175,6 +186,58 @@ private func monogramStarsEntries(accountId: Int64) -> [MonogramStarsEntry] {
     }
     entries.append(.footer(2999, "Подписка показывается как активная, пока дата окончания в будущем, и как истёкшая после неё."))
     return entries
+}
+
+private struct MonogramGiftPickerItem {
+    let title: String
+    let price: Int64
+    let gift: StarGift
+}
+
+/// Список подарков каталога с ценой: выбор подставляет в запись сумму и стикер настоящего подарка.
+private final class MonogramGiftPickerController: UITableViewController {
+    private let items: [MonogramGiftPickerItem]
+    var onSelect: ((MonogramGiftPickerItem) -> Void)?
+    var onCancel: (() -> Void)?
+
+    init(items: [MonogramGiftPickerItem]) {
+        self.items = items
+        super.init(style: .insetGrouped)
+    }
+
+    required init?(coder: NSCoder) {
+        preconditionFailure()
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.title = "Выберите подарок"
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Отмена", style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.tableView.register(UITableViewCell.self, forCellReuseIdentifier: "gift")
+    }
+
+    @objc private func cancelPressed() {
+        self.onCancel?()
+    }
+
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.items.count
+    }
+
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "gift", for: indexPath)
+        let item = self.items[indexPath.row]
+        var content = UIListContentConfiguration.valueCell()
+        content.text = item.title
+        content.secondaryText = "\(item.price) ⭐️"
+        cell.contentConfiguration = content
+        return cell
+    }
+
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        self.onSelect?(self.items[indexPath.row])
+    }
 }
 
 public func monogramStarsController(context: AccountContext) -> ViewController {
@@ -268,7 +331,7 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
             let id = existing?.id ?? UUID().uuidString
             resolveUsername(username, existing?.username, existing?.peerId) { peerId, peerTitle in
                 var operations = store.operations(accountId: accountId)
-                let updated = MonogramLocalStarsOperation(id: id, title: title, subtitle: subtitle.isEmpty ? (peerTitle ?? title) : subtitle, amount: amount, date: date, username: username, peerId: peerId)
+                let updated = MonogramLocalStarsOperation(id: id, title: title, subtitle: subtitle.isEmpty ? (peerTitle ?? title) : subtitle, amount: amount, date: date, username: username, peerId: peerId, kind: existing?.kind, giftData: existing?.giftData, transactionId: existing?.transactionId)
                 if let index = operations.firstIndex(where: { $0.id == updated.id }) {
                     operations[index] = updated
                 } else {
@@ -339,6 +402,106 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
         present(alert)
     }
 
+    // Фейк-операции меняют показываемый баланс: за основу берётся заданный вручную или тот, что виден сейчас.
+    let shiftBalance: (Int64) -> Void = { delta in
+        let base = store.balance(accountId: accountId) ?? context.starsContext?.currentState?.balance.value ?? 0
+        store.setBalance(accountId: accountId, max(0, base + delta))
+    }
+
+    let giftsDisposable = MetaDisposable()
+    let askGift: () -> Void = {
+        giftsDisposable.set((context.engine.payments.cachedStarGifts()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { gifts in
+            var items: [MonogramGiftPickerItem] = []
+            for starGift in gifts ?? [] {
+                if case let .generic(gift) = starGift {
+                    items.append(MonogramGiftPickerItem(title: gift.title ?? "Подарок", price: gift.price, gift: starGift))
+                }
+            }
+            items.sort(by: { $0.price < $1.price })
+            if items.isEmpty {
+                let alert = UIAlertController(title: "Каталог подарков пуст", message: "Откройте любой экран отправки подарка, чтобы каталог загрузился, и повторите.", preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .default))
+                present(alert)
+                return
+            }
+            let picker = MonogramGiftPickerController(items: items)
+            let navigation = UINavigationController(rootViewController: picker)
+            picker.onSelect = { item in
+                navigation.dismiss(animated: true, completion: {
+                    let alert = UIAlertController(title: "\(item.title) · \(item.price) ⭐️", message: "Кому подарок (имя в строке), юзернейм (только аватарка, необязательно) и дата дд.мм.гггг чч:мм (пусто — сейчас). Сумма, стикер, ID и баланс подставятся сами.", preferredStyle: .alert)
+                    alert.addTextField { field in
+                        field.placeholder = "Имя получателя"
+                    }
+                    alert.addTextField { field in
+                        field.placeholder = "Юзернейм для аватарки"
+                        field.autocapitalizationType = .none
+                        field.autocorrectionType = .no
+                    }
+                    alert.addTextField { field in
+                        field.placeholder = "Дата"
+                    }
+                    alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+                    alert.addAction(UIAlertAction(title: "Добавить", style: .default, handler: { _ in
+                        let fields = alert.textFields ?? []
+                        let name = (fields[0].text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        let username = monogramStarsCleanUsername(fields[1].text ?? "")
+                        guard !name.isEmpty || username != nil else {
+                            return
+                        }
+                        let date = monogramStarsParseDate(fields[2].text ?? "", fallback: Int32(Date().timeIntervalSince1970))
+                        resolveUsername(username, nil, nil) { peerId, peerTitle in
+                            var operations = store.operations(accountId: accountId)
+                            operations.append(MonogramLocalStarsOperation(id: UUID().uuidString, title: "Подарок", subtitle: name.isEmpty ? (peerTitle ?? "Пользователь") : name, amount: -item.price, date: date, username: username, peerId: peerId, kind: nil, giftData: try? JSONEncoder().encode(item.gift), transactionId: MonogramLocalStars.makeTransactionId()))
+                            store.setOperations(accountId: accountId, operations)
+                            shiftBalance(-item.price)
+                            reload()
+                        }
+                    }))
+                    present(alert)
+                })
+            }
+            picker.onCancel = {
+                navigation.dismiss(animated: true)
+            }
+            context.sharedContext.mainWindow?.presentNative(navigation)
+        }))
+    }
+
+    let askTopUp: () -> Void = {
+        let sheet = UIAlertController(title: "Пополнение звёзд", message: "Откуда пришли звёзды", preferredStyle: .alert)
+        let sources: [(String, String)] = [("App Store", "appStore"), ("Premium Bot", "premiumBot")]
+        for (title, kind) in sources {
+            sheet.addAction(UIAlertAction(title: title, style: .default, handler: { _ in
+                let alert = UIAlertController(title: "Пополнение · \(title)", message: "Сколько звёзд и дата дд.мм.гггг чч:мм (пусто — сейчас). ID и баланс подставятся сами.", preferredStyle: .alert)
+                alert.addTextField { field in
+                    field.placeholder = "Сколько звёзд, например 250"
+                    field.keyboardType = .numberPad
+                }
+                alert.addTextField { field in
+                    field.placeholder = "Дата"
+                }
+                alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+                alert.addAction(UIAlertAction(title: "Добавить", style: .default, handler: { _ in
+                    let fields = alert.textFields ?? []
+                    guard let amount = Int64((fields[0].text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)), amount > 0 else {
+                        return
+                    }
+                    let date = monogramStarsParseDate(fields[1].text ?? "", fallback: Int32(Date().timeIntervalSince1970))
+                    var operations = store.operations(accountId: accountId)
+                    operations.append(MonogramLocalStarsOperation(id: UUID().uuidString, title: "Покупка звёзд", subtitle: title, amount: amount, date: date, username: nil, peerId: nil, kind: kind, giftData: nil, transactionId: MonogramLocalStars.makeTransactionId()))
+                    store.setOperations(accountId: accountId, operations)
+                    shiftBalance(amount)
+                    reload()
+                }))
+                present(alert)
+            }))
+        }
+        sheet.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+        present(sheet)
+    }
+
     let arguments = MonogramStarsControllerArguments(editBalance: {
         let alert = UIAlertController(title: "Баланс звёзд", message: "Сколько звёзд показывать. Пусто — настоящий баланс.", preferredStyle: .alert)
         alert.addTextField { field in
@@ -367,6 +530,10 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
         askSubscription(nil)
     }, editSubscription: { id in
         askSubscription(store.subscriptions(accountId: accountId).first(where: { $0.id == id }))
+    }, addGift: {
+        askGift()
+    }, addTopUp: {
+        askTopUp()
     })
 
     let signal = combineLatest(queue: .mainQueue(),
