@@ -9,8 +9,17 @@ public struct MonogramLocalStarsOperation: Codable, Equatable {
     public var date: Int32
     public var username: String?
     public var peerId: Int64?
+    /// nil — обычная запись; "appStore" и "premiumBot" — пополнение с соответствующим источником.
+    public var kind: String?
+    /// JSON настоящего подарка из каталога (`StarGift`): строка рисуется как подарок со стикером.
+    public var giftData: Data?
+    /// ID сделки, который показывается в окне операции; без него виден служебный ID записи.
+    public var transactionId: String?
 
-    public init(id: String, title: String, subtitle: String, amount: Int64, date: Int32, username: String? = nil, peerId: Int64? = nil) {
+    public init(id: String, title: String, subtitle: String, amount: Int64, date: Int32, username: String? = nil, peerId: Int64? = nil, kind: String? = nil, giftData: Data? = nil, transactionId: String? = nil) {
+        self.kind = kind
+        self.giftData = giftData
+        self.transactionId = transactionId
         self.username = username
         self.peerId = peerId
         self.id = id
@@ -116,6 +125,16 @@ public final class MonogramLocalStars {
         return TelegramUser(id: user.id, accessHash: user.accessHash, firstName: name, lastName: nil, username: nil, phone: nil, photo: user.photo, botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: user.nameColor, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
     }
 
+    /// ID сделки в том виде, как его показывает Telegram: «stx» и url-безопасный base64 из 32 случайных байт.
+    public static func makeTransactionId() -> String {
+        let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+        var result = "stx"
+        for _ in 0 ..< 43 {
+            result.append(alphabet[Int.random(in: 0 ..< alphabet.count)])
+        }
+        return result
+    }
+
     /// Выдуманный пользователь для названия в строке: у локальной записи нет настоящего собеседника.
     func fakePeer(seed: String, name: String) -> TelegramUser {
         var hash: UInt64 = 1469598103934665603
@@ -151,8 +170,18 @@ extension MonogramLocalStars {
                 case .all:
                     break
                 }
-                let peer: Peer = self.peer(operation.peerId.flatMap { transaction.getPeer(PeerId($0)) }, named: operation.subtitle, seed: operation.id)
-                let transaction = StarsContext.State.Transaction(flags: [], id: "monogram-local-" + operation.id, count: CurrencyAmount(amount: StarsAmount(value: operation.amount, nanos: 0), currency: .stars), date: operation.date, peer: .peer(EnginePeer(peer)), title: operation.title, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, giveawayMessageId: nil, media: [], subscriptionPeriod: nil, starGift: nil, floodskipNumber: nil, starrefCommissionPermille: nil, starrefPeerId: nil, starrefAmount: nil, paidMessageCount: nil, premiumGiftMonths: nil, adsProceedsFromDate: nil, adsProceedsToDate: nil)
+                let transactionPeer: StarsContext.State.Transaction.Peer
+                switch operation.kind {
+                case "appStore":
+                    transactionPeer = .appStore
+                case "premiumBot":
+                    transactionPeer = .premiumBot
+                default:
+                    let peer: Peer = self.peer(operation.peerId.flatMap { transaction.getPeer(PeerId($0)) }, named: operation.subtitle, seed: operation.id)
+                    transactionPeer = .peer(EnginePeer(peer))
+                }
+                let starGift: StarGift? = operation.giftData.flatMap { try? JSONDecoder().decode(StarGift.self, from: $0) }
+                let transaction = StarsContext.State.Transaction(flags: [], id: operation.transactionId ?? ("monogram-local-" + operation.id), count: CurrencyAmount(amount: StarsAmount(value: operation.amount, nanos: 0), currency: .stars), date: operation.date, peer: transactionPeer, title: operation.title, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, giveawayMessageId: nil, media: [], subscriptionPeriod: nil, starGift: starGift, floodskipNumber: nil, starrefCommissionPermille: nil, starrefPeerId: nil, starrefAmount: nil, paidMessageCount: nil, premiumGiftMonths: nil, adsProceedsFromDate: nil, adsProceedsToDate: nil)
                 transactions.append(transaction)
             }
             transactions = transactions.enumerated().sorted(by: { lhs, rhs in
