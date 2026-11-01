@@ -80,6 +80,16 @@ public final class MonogramLocalStars {
         }
     }
 
+    /// Если включено, переключатель «Фейк-подарок» в экране отправки подарка стоит включённым сразу.
+    public var fakeGiftByDefault: Bool {
+        get {
+            return self.defaults.bool(forKey: "monogram_localStars_fakeGiftDefault")
+        }
+        set {
+            self.defaults.set(newValue, forKey: "monogram_localStars_fakeGiftDefault")
+        }
+    }
+
     public func operations(accountId: Int64) -> [MonogramLocalStarsOperation] {
         return self.load(self.key(accountId, "operations"))
     }
