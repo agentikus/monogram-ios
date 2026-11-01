@@ -30,6 +30,15 @@ private final class SynchronizePeerReadStatesContextImpl {
     private var currentState: [PeerId : PeerReadStateSynchronizationOperation] = [:]
     private var activeOperations: [PeerId: Operation] = [:]
     private var pendingOperations: [PeerId: PeerReadStateSynchronizationOperation] = [:]
+    private var retryCounts: [PeerId: Int] = [:]
+    
+    /// Pause before an operation that failed, or that finished without leaving the table, is started again.
+    /// Without it such an operation restarts at once, forever, and keeps a core busy with a growing log.
+    private func retryDelay(peerId: PeerId) -> Double {
+        let attempt = (self.retryCounts[peerId] ?? 0) + 1
+        self.retryCounts[peerId] = attempt
+        return min(60.0, 0.5 * pow(2.0, Double(min(attempt, 8) - 1)))
+    }
     
     init(queue: Queue, network: Network, postbox: Postbox, stateManager: AccountStateManager) {
         self.queue = queue
@@ -100,9 +109,17 @@ private final class SynchronizePeerReadStatesContextImpl {
                         }
                         if let activeOperation = activeOperation {
                             if let current = strongSelf.activeOperations[peerId], current === activeOperation {
-                                Logger.shared.log("SynchronizePeerReadStates", "\(peerId): operation retry \(operation)")
-                                strongSelf.activeOperations.removeValue(forKey: peerId)
-                                strongSelf.update()
+                                let delay = strongSelf.retryDelay(peerId: peerId)
+                                Logger.shared.log("SynchronizePeerReadStates", "\(peerId): operation retry \(operation) in \(delay) s")
+                                strongSelf.queue.after(delay, { [weak strongSelf, weak activeOperation] in
+                                    guard let strongSelf = strongSelf, let activeOperation = activeOperation else {
+                                        return
+                                    }
+                                    if let current = strongSelf.activeOperations[peerId], current === activeOperation {
+                                        strongSelf.activeOperations.removeValue(forKey: peerId)
+                                        strongSelf.update()
+                                    }
+                                })
                             }
                         }
                     }, completed: { [weak self, weak activeOperation] in
@@ -112,8 +129,23 @@ private final class SynchronizePeerReadStatesContextImpl {
                         if let activeOperation = activeOperation {
                             if let current = strongSelf.activeOperations[peerId], current === activeOperation {
                                 Logger.shared.log("SynchronizePeerReadStates", "\(peerId): operation completed \(operation)")
-                                strongSelf.activeOperations.removeValue(forKey: peerId)
-                                strongSelf.update()
+                                if strongSelf.currentState[peerId] == operation {
+                                    let delay = strongSelf.retryDelay(peerId: peerId)
+                                    Logger.shared.log("SynchronizePeerReadStates", "\(peerId): operation is still in the table, restart in \(delay) s")
+                                    strongSelf.queue.after(delay, { [weak strongSelf, weak activeOperation] in
+                                        guard let strongSelf = strongSelf, let activeOperation = activeOperation else {
+                                            return
+                                        }
+                                        if let current = strongSelf.activeOperations[peerId], current === activeOperation {
+                                            strongSelf.activeOperations.removeValue(forKey: peerId)
+                                            strongSelf.update()
+                                        }
+                                    })
+                                } else {
+                                    strongSelf.retryCounts.removeValue(forKey: peerId)
+                                    strongSelf.activeOperations.removeValue(forKey: peerId)
+                                    strongSelf.update()
+                                }
                             }
                         }
                     }))
