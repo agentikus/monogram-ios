@@ -160,6 +160,24 @@ jobs:
           path: /Users/Shared/telegram-ios/build/artifacts/Monogram.ipa.enc
           if-no-files-found: error
 
+      - name: Encrypt dSYM
+        continue-on-error: true
+        env:
+          ARTIFACT_PASSWORD: ${{ secrets.ARTIFACT_PASSWORD }}
+        run: |
+          if [ -f /Users/Shared/telegram-ios/build/dsym-out/Telegram.DSYMs.zip ] && [ -n "$ARTIFACT_PASSWORD" ]; then
+            openssl enc -aes-256-cbc -pbkdf2 -md sha256 -iter 200000 -salt -in /Users/Shared/telegram-ios/build/dsym-out/Telegram.DSYMs.zip -out /Users/Shared/telegram-ios/build/dsym-out/Telegram.DSYMs.zip.enc -pass env:ARTIFACT_PASSWORD
+            ls -l /Users/Shared/telegram-ios/build/dsym-out/
+          fi
+
+      - name: Upload encrypted dSYM
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: Monogram-dSYM-enc
+          path: /Users/Shared/telegram-ios/build/dsym-out/Telegram.DSYMs.zip.enc
+          if-no-files-found: warn
+
       - name: Delete older artifacts
         env:
           GH_TOKEN: ${{ github.token }}
