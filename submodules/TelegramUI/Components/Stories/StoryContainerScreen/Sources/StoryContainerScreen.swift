@@ -2185,10 +2185,10 @@ public class StoryContainerScreen: ViewControllerComponentContainer, KeyShortcut
                 componentView.animateIn()
             }
             
-            if MonogramSettings.shared.suggestGhostBeforeStory && MonogramSettings.shared.sendReadStories {
+            if MonogramSettings.shared.suggestGhostBeforeStory && MonogramSettings.shared.sends(.readStories, accountId: self.context.account.peerId.toInt64()) {
                 let alert = UIAlertController(title: "Режим призрака", message: "Включить режим призрака для историй? Тогда автор не увидит, что вы смотрели историю.", preferredStyle: .alert)
                 alert.addAction(UIAlertAction(title: "Включить", style: .default, handler: { _ in
-                    MonogramSettings.shared.sendReadStories = false
+                    MonogramSettings.shared.setSends(.readStories, accountId: self.context.account.peerId.toInt64(), false)
                 }))
                 alert.addAction(UIAlertAction(title: "Не сейчас", style: .cancel, handler: nil))
                 self.context.sharedContext.mainWindow?.presentNative(alert)

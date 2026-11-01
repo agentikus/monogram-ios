@@ -358,7 +358,7 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
 }
 
 private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, willValidate: Bool) -> Signal<Never, PeerReadStateValidationError> {
-    if !MonogramSettings.shared.sendReadMessages && !MonogramSettings.shared.isReadPushAllowed(peerId.toInt64()) {
+    if !MonogramSettings.shared.sends(.readMessages, accountId: stateManager.accountPeerId.toInt64()) && !MonogramSettings.shared.isReadPushAllowed(peerId.toInt64()) {
         return confirmSynchronized(postbox: postbox, peerId: peerId)
         |> ignoreValues
     }

@@ -1,5 +1,9 @@
 # Changelog: Monogram iOS
 
+## 2026-11-01 (final15)
+- Режим призрака теперь у каждого аккаунта свой: `MonogramSettings.sends(_:accountId:)` / `setGhostModeActive(accountId:)`, ключи `monogram_ghost_<флаг>_<id аккаунта>`; пока для аккаунта ничего не выбрано, действует прежнее общее значение. Переключатель в настройках профиля, экран Monogram, история, отметки о прочтении, набор текста и онлайн читают значение своего аккаунта.
+- Локальные звёзды: в операции и подписке можно указать юзернейм; пользователь находится через `resolvePeerByName`, и в списке показываются его настоящие аватарка и имя.
+
 ## 2026-11-01 (final14)
 - Сожжённое медиа остаётся самоуничтожающимся в чате (размытая заглушка с меткой), а не разворачивается в полный размер: `containsSecretMedia` теперь учитывает `MonogramBurnedMessageAttribute` (`SyncCore_AutoremoveTimeoutMessageAttribute.swift`).
 - Локальные звёзды (`MonogramLocalStars.swift`, `MonogramStarsController.swift`): свой показываемый баланс, свои операции и подписки отдельно для каждого аккаунта; подмена идёт в `Stars.swift` в `_internal_requestStarsState`, `_internal_requestStarsSubscriptions` и при серверных обновлениях баланса. Настройки Monogram → «Звёзды (локально)».

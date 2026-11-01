@@ -129,6 +129,16 @@ private func monogramStarsParseDate(_ text: String, fallback: Int32) -> Int32 {
     return fallback
 }
 
+private func monogramStarsCleanUsername(_ text: String) -> String? {
+    var value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    for prefix in ["https://t.me/", "http://t.me/", "t.me/", "@"] {
+        if value.lowercased().hasPrefix(prefix) {
+            value = String(value.dropFirst(prefix.count))
+        }
+    }
+    return value.isEmpty ? nil : value
+}
+
 private func monogramStarsSignedText(_ amount: Int64) -> String {
     return (amount > 0 ? "+" : "") + "\(amount) ⭐️"
 }
@@ -183,8 +193,38 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
         context.sharedContext.mainWindow?.presentNative(alert)
     }
 
+    let resolveDisposable = MetaDisposable()
+    let resolveUsername: (String?, String?, Int64?, @escaping (Int64?, String?) -> Void) -> Void = { username, previousUsername, previousPeerId, completion in
+        guard let username else {
+            completion(nil, nil)
+            return
+        }
+        if username == previousUsername, let previousPeerId {
+            completion(previousPeerId, nil)
+            return
+        }
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: username, referrer: nil)
+        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+            if case let .result(peer) = result {
+                return .single(peer)
+            }
+            return .complete()
+        }
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { peer in
+            if let peer {
+                completion(peer.id.toInt64(), peer.compactDisplayTitle)
+            } else {
+                let alert = UIAlertController(title: "Пользователь не найден", message: "@\(username): запись сохранена без аватарки.", preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .default))
+                context.sharedContext.mainWindow?.presentNative(alert)
+                completion(nil, nil)
+            }
+        }))
+    }
+
     let askOperation: (MonogramLocalStarsOperation?) -> Void = { existing in
-        let alert = UIAlertController(title: existing == nil ? "Новая операция" : "Операция", message: "Название, подпись, сумма (минус — списание) и дата дд.мм.гггг чч:мм (пусто — сейчас)", preferredStyle: .alert)
+        let alert = UIAlertController(title: existing == nil ? "Новая операция" : "Операция", message: "Название, подпись, сумма (минус — списание), дата дд.мм.гггг чч:мм (пусто — сейчас) и юзернейм, чья аватарка и имя покажутся (необязательно)", preferredStyle: .alert)
         alert.addTextField { field in
             field.placeholder = "Название, например: Покупка подарка"
             field.text = existing?.title
@@ -202,6 +242,12 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
             field.placeholder = "Дата"
             field.text = existing.flatMap { monogramStarsDateText($0.date) }
         }
+        alert.addTextField { field in
+            field.placeholder = "Юзернейм для аватарки, например durov"
+            field.autocapitalizationType = .none
+            field.autocorrectionType = .no
+            field.text = existing?.username
+        }
         alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
         if let existing {
             alert.addAction(UIAlertAction(title: "Удалить", style: .destructive, handler: { _ in
@@ -218,15 +264,19 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
                 return
             }
             let date = monogramStarsParseDate(fields[3].text ?? "", fallback: existing?.date ?? Int32(Date().timeIntervalSince1970))
-            var operations = store.operations(accountId: accountId)
-            let updated = MonogramLocalStarsOperation(id: existing?.id ?? UUID().uuidString, title: title, subtitle: subtitle.isEmpty ? title : subtitle, amount: amount, date: date)
-            if let index = operations.firstIndex(where: { $0.id == updated.id }) {
-                operations[index] = updated
-            } else {
-                operations.append(updated)
+            let username = monogramStarsCleanUsername(fields[4].text ?? "")
+            let id = existing?.id ?? UUID().uuidString
+            resolveUsername(username, existing?.username, existing?.peerId) { peerId, peerTitle in
+                var operations = store.operations(accountId: accountId)
+                let updated = MonogramLocalStarsOperation(id: id, title: title, subtitle: subtitle.isEmpty ? (peerTitle ?? title) : subtitle, amount: amount, date: date, username: username, peerId: peerId)
+                if let index = operations.firstIndex(where: { $0.id == updated.id }) {
+                    operations[index] = updated
+                } else {
+                    operations.append(updated)
+                }
+                store.setOperations(accountId: accountId, operations)
+                reload()
             }
-            store.setOperations(accountId: accountId, operations)
-            reload()
         }))
         present(alert)
     }
@@ -251,6 +301,12 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
             field.keyboardType = .numberPad
             field.text = (existing?.isCancelled ?? false) ? "1" : "0"
         }
+        alert.addTextField { field in
+            field.placeholder = "Юзернейм для аватарки, например durov"
+            field.autocapitalizationType = .none
+            field.autocorrectionType = .no
+            field.text = existing?.username
+        }
         alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
         if let existing {
             alert.addAction(UIAlertAction(title: "Удалить", style: .destructive, handler: { _ in
@@ -266,15 +322,19 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
             }
             let untilDate = monogramStarsParseDate(fields[2].text ?? "", fallback: existing?.untilDate ?? Int32(Date().timeIntervalSince1970) + 30 * 24 * 60 * 60)
             let cancelled = (fields[3].text ?? "").trimmingCharacters(in: .whitespacesAndNewlines) == "1"
-            var items = store.subscriptions(accountId: accountId)
-            let updated = MonogramLocalStarsSubscription(id: existing?.id ?? UUID().uuidString, name: name, price: price, untilDate: untilDate, isCancelled: cancelled)
-            if let index = items.firstIndex(where: { $0.id == updated.id }) {
-                items[index] = updated
-            } else {
-                items.append(updated)
+            let username = monogramStarsCleanUsername(fields[4].text ?? "")
+            let id = existing?.id ?? UUID().uuidString
+            resolveUsername(username, existing?.username, existing?.peerId) { peerId, _ in
+                var items = store.subscriptions(accountId: accountId)
+                let updated = MonogramLocalStarsSubscription(id: id, name: name, price: price, untilDate: untilDate, isCancelled: cancelled, username: username, peerId: peerId)
+                if let index = items.firstIndex(where: { $0.id == updated.id }) {
+                    items[index] = updated
+                } else {
+                    items.append(updated)
+                }
+                store.setSubscriptions(accountId: accountId, items)
+                reload()
             }
-            store.setSubscriptions(accountId: accountId, items)
-            reload()
         }))
         present(alert)
     }

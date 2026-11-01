@@ -7,8 +7,12 @@ public struct MonogramLocalStarsOperation: Codable, Equatable {
     public var subtitle: String
     public var amount: Int64
     public var date: Int32
+    public var username: String?
+    public var peerId: Int64?
 
-    public init(id: String, title: String, subtitle: String, amount: Int64, date: Int32) {
+    public init(id: String, title: String, subtitle: String, amount: Int64, date: Int32, username: String? = nil, peerId: Int64? = nil) {
+        self.username = username
+        self.peerId = peerId
         self.id = id
         self.title = title
         self.subtitle = subtitle
@@ -23,8 +27,12 @@ public struct MonogramLocalStarsSubscription: Codable, Equatable {
     public var price: Int64
     public var untilDate: Int32
     public var isCancelled: Bool
+    public var username: String?
+    public var peerId: Int64?
 
-    public init(id: String, name: String, price: Int64, untilDate: Int32, isCancelled: Bool) {
+    public init(id: String, name: String, price: Int64, untilDate: Int32, isCancelled: Bool, username: String? = nil, peerId: Int64? = nil) {
+        self.username = username
+        self.peerId = peerId
         self.id = id
         self.name = name
         self.price = price
@@ -108,7 +116,7 @@ public final class MonogramLocalStars {
 }
 
 extension MonogramLocalStars {
-    func applying(to status: InternalStarsStatus, accountId: Int64, ton: Bool, mode: StarsTransactionsContext.Mode, firstPage: Bool) -> InternalStarsStatus {
+    func applying(to status: InternalStarsStatus, transaction: Transaction, accountId: Int64, ton: Bool, mode: StarsTransactionsContext.Mode, firstPage: Bool) -> InternalStarsStatus {
         if ton {
             return status
         }
@@ -131,7 +139,7 @@ extension MonogramLocalStars {
                 case .all:
                     break
                 }
-                let peer = self.fakePeer(seed: operation.id, name: operation.subtitle)
+                let peer: Peer = operation.peerId.flatMap { transaction.getPeer(PeerId($0)) } ?? self.fakePeer(seed: operation.id, name: operation.subtitle)
                 let transaction = StarsContext.State.Transaction(flags: [], id: "monogram-local-" + operation.id, count: CurrencyAmount(amount: StarsAmount(value: operation.amount, nanos: 0), currency: .stars), date: operation.date, peer: .peer(EnginePeer(peer)), title: operation.title, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, giveawayMessageId: nil, media: [], subscriptionPeriod: nil, starGift: nil, floodskipNumber: nil, starrefCommissionPermille: nil, starrefPeerId: nil, starrefAmount: nil, paidMessageCount: nil, premiumGiftMonths: nil, adsProceedsFromDate: nil, adsProceedsToDate: nil)
                 transactions.append(transaction)
             }
@@ -145,7 +153,7 @@ extension MonogramLocalStars {
         return InternalStarsStatus(balance: balance, subscriptionsMissingBalance: status.subscriptionsMissingBalance, subscriptions: status.subscriptions, nextSubscriptionsOffset: status.nextSubscriptionsOffset, transactions: transactions, nextTransactionsOffset: status.nextTransactionsOffset)
     }
 
-    func applying(to status: InternalStarsStatus, accountId: Int64, missingBalance: Bool, firstPage: Bool) -> InternalStarsStatus {
+    func applying(to status: InternalStarsStatus, transaction: Transaction, accountId: Int64, missingBalance: Bool, firstPage: Bool) -> InternalStarsStatus {
         var balance = status.balance
         if let override = self.balance(accountId: accountId) {
             balance = StarsAmount(value: override, nanos: 0)
@@ -153,7 +161,7 @@ extension MonogramLocalStars {
         var subscriptions = status.subscriptions
         if firstPage && !missingBalance {
             for item in self.subscriptions(accountId: accountId) {
-                let peer = self.fakePeer(seed: item.id, name: item.name)
+                let peer: Peer = item.peerId.flatMap { transaction.getPeer(PeerId($0)) } ?? self.fakePeer(seed: item.id, name: item.name)
                 var flags: StarsContext.State.Subscription.Flags = []
                 if item.isCancelled {
                     flags.insert(.isCancelled)
