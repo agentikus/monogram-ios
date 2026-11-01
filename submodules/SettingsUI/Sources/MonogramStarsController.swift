@@ -16,8 +16,10 @@ private final class MonogramStarsControllerArguments {
     let editSubscription: (String) -> Void
     let addGift: () -> Void
     let addTopUp: () -> Void
+    let addUniqueGift: () -> Void
 
-    init(editBalance: @escaping () -> Void, addOperation: @escaping () -> Void, editOperation: @escaping (String) -> Void, addSubscription: @escaping () -> Void, editSubscription: @escaping (String) -> Void, addGift: @escaping () -> Void, addTopUp: @escaping () -> Void) {
+    init(editBalance: @escaping () -> Void, addOperation: @escaping () -> Void, editOperation: @escaping (String) -> Void, addSubscription: @escaping () -> Void, editSubscription: @escaping (String) -> Void, addGift: @escaping () -> Void, addTopUp: @escaping () -> Void, addUniqueGift: @escaping () -> Void) {
+        self.addUniqueGift = addUniqueGift
         self.addGift = addGift
         self.addTopUp = addTopUp
         self.editBalance = editBalance
@@ -94,6 +96,8 @@ private enum MonogramStarsEntry: ItemListNodeEntry {
                     arguments.addGift()
                 case 3:
                     arguments.addTopUp()
+                case 4:
+                    arguments.addUniqueGift()
                 default:
                     arguments.addSubscription()
                 }
@@ -168,6 +172,7 @@ private func monogramStarsEntries(accountId: Int64) -> [MonogramStarsEntry] {
     entries.append(.action(1001, "Добавить операцию", 0))
     entries.append(.action(1002, "Подарок из каталога", 2))
     entries.append(.action(1003, "Пополнение звёзд", 3))
+    entries.append(.action(1004, "Покупка уникального подарка", 4))
     var index: Int32 = 1010
     for operation in store.operations(accountId: accountId).sorted(by: { $0.date > $1.date }) {
         entries.append(.operation(index, operation.id, operation.title + " · " + operation.subtitle, monogramStarsSignedText(operation.amount)))
@@ -502,6 +507,63 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
         present(sheet)
     }
 
+    let uniqueDisposable = MetaDisposable()
+    let askUniqueGift: () -> Void = {
+        let alert = UIAlertController(title: "Покупка уникального подарка", message: "Ссылка на подарок (t.me/nft/…), цена, имя продавца в строке, юзернейм (только аватарка, необязательно) и дата дд.мм.гггг чч:мм (пусто — сейчас).", preferredStyle: .alert)
+        alert.addTextField { field in
+            field.placeholder = "Ссылка t.me/nft/…"
+            field.autocapitalizationType = .none
+            field.autocorrectionType = .no
+        }
+        alert.addTextField { field in
+            field.placeholder = "Цена в звёздах, например 1500"
+            field.keyboardType = .numberPad
+        }
+        alert.addTextField { field in
+            field.placeholder = "Имя продавца"
+        }
+        alert.addTextField { field in
+            field.placeholder = "Юзернейм для аватарки"
+            field.autocapitalizationType = .none
+            field.autocorrectionType = .no
+        }
+        alert.addTextField { field in
+            field.placeholder = "Дата"
+        }
+        alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Добавить", style: .default, handler: { _ in
+            let fields = alert.textFields ?? []
+            var link = (fields[0].text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if let range = link.range(of: "nft/") {
+                link = String(link[range.upperBound...])
+            }
+            if let end = link.firstIndex(where: { $0 == "?" || $0 == "/" }) {
+                link = String(link[..<end])
+            }
+            let name = (fields[2].text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let username = monogramStarsCleanUsername(fields[3].text ?? "")
+            guard !link.isEmpty, let price = Int64((fields[1].text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)), price > 0, !name.isEmpty || username != nil else {
+                return
+            }
+            let date = monogramStarsParseDate(fields[4].text ?? "", fallback: Int32(Date().timeIntervalSince1970))
+            uniqueDisposable.set((context.engine.payments.getUniqueStarGift(slug: link)
+            |> deliverOnMainQueue).start(next: { gift in
+                resolveUsername(username, nil, nil) { peerId, peerTitle in
+                    var operations = store.operations(accountId: accountId)
+                    operations.append(MonogramLocalStarsOperation(id: UUID().uuidString, title: "Покупка подарка", subtitle: name.isEmpty ? (peerTitle ?? "Пользователь") : name, amount: -price, date: date, username: username, peerId: peerId, kind: "uniqueBuy", giftData: try? JSONEncoder().encode(StarGift.unique(gift)), transactionId: MonogramLocalStars.makeTransactionId()))
+                    store.setOperations(accountId: accountId, operations)
+                    shiftBalance(-price)
+                    reload()
+                }
+            }, error: { _ in
+                let failure = UIAlertController(title: "Подарок не найден", message: "Проверьте ссылку: нужна ссылка на уникальный подарок вида t.me/nft/Название-123.", preferredStyle: .alert)
+                failure.addAction(UIAlertAction(title: "OK", style: .default))
+                present(failure)
+            }))
+        }))
+        present(alert)
+    }
+
     let arguments = MonogramStarsControllerArguments(editBalance: {
         let alert = UIAlertController(title: "Баланс звёзд", message: "Сколько звёзд показывать. Пусто — настоящий баланс.", preferredStyle: .alert)
         alert.addTextField { field in
@@ -534,6 +596,8 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
         askGift()
     }, addTopUp: {
         askTopUp()
+    }, addUniqueGift: {
+        askUniqueGift()
     })
 
     let signal = combineLatest(queue: .mainQueue(),

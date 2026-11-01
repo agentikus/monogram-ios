@@ -148,6 +148,7 @@ private final class GiftSetupScreenComponent: Component {
         private var currentEmojiSuggestionView: ComponentHostView<Empty>?
         
         private var hideName = false
+        private var fakeGift = false
         private var includeUpgrade = false
         private var payWithStars = false
         
@@ -536,11 +537,25 @@ private final class GiftSetupScreenComponent: Component {
                 source = .starGift(hideName: self.hideName, includeUpgrade: self.includeUpgrade, peerId: peerId, giftId: starGift.id, text: textInputText.string, entities: entities)
             }
             
+            if self.fakeGift, case let .starGift(starGift, _) = component.subject {
+                let accountId = context.account.peerId.toInt64()
+                let store = MonogramLocalStars.shared
+                let peer = self.peerMap[peerId]
+                var operations = store.operations(accountId: accountId)
+                operations.append(MonogramLocalStarsOperation(id: UUID().uuidString, title: "Подарок", subtitle: peer?.compactDisplayTitle ?? "Пользователь", amount: -finalPrice, date: Int32(Date().timeIntervalSince1970), username: nil, peerId: peerId.toInt64(), kind: nil, giftData: try? JSONEncoder().encode(StarGift.generic(starGift)), transactionId: MonogramLocalStars.makeTransactionId()))
+                store.setOperations(accountId: accountId, operations)
+                let base = store.balance(accountId: accountId) ?? starsState.balance.value
+                store.setBalance(accountId: accountId, max(0, base - finalPrice))
+                starsContext.load(force: true)
+                environment.controller()?.dismiss()
+                return
+            }
+
             let proceed = { [weak self] in
                 guard let self else {
                     return
                 }
-                
+
                 self.inProgress = true
                 self.state?.updated()
                 
@@ -1801,7 +1816,33 @@ private final class GiftSetupScreenComponent: Component {
                                 })),
                                 action: nil
                             )))
-                        ]
+                        ] + { () -> [AnyComponentWithIdentity<Empty>] in
+                            guard case .starGift = component.subject else {
+                                return []
+                            }
+                            return [AnyComponentWithIdentity(id: 1, component: AnyComponent(ListActionItemComponent(
+                                theme: theme,
+                                style: .glass,
+                                title: AnyComponent(VStack([
+                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                        text: .plain(NSAttributedString(
+                                            string: "Фейк-подарок (Monogram)",
+                                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                            textColor: theme.list.itemPrimaryTextColor
+                                        )),
+                                        maximumNumberOfLines: 1
+                                    ))),
+                                ], alignment: .left, spacing: 2.0)),
+                                accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.fakeGift, action: { [weak self] _ in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.fakeGift = !self.fakeGift
+                                    self.state?.updated(transition: .spring(duration: 0.4))
+                                })),
+                                action: nil
+                            )))]
+                        }()
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
