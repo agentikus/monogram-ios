@@ -148,7 +148,7 @@ private final class GiftSetupScreenComponent: Component {
         private var currentEmojiSuggestionView: ComponentHostView<Empty>?
         
         private var hideName = false
-        private var fakeGift = false
+        private var fakeGift = MonogramLocalStars.shared.fakeGiftByDefault
         private var includeUpgrade = false
         private var payWithStars = false
         

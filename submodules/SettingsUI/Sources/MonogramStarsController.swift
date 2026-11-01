@@ -37,6 +37,7 @@ private enum MonogramStarsEntry: ItemListNodeEntry {
     case action(Int32, String, Int32)
     case operation(Int32, String, String, String)
     case subscription(Int32, String, String, String)
+    case fakeGiftSwitch(Int32, String, Bool)
 
     var section: ItemListSectionId {
         return self.sortIndex / 1000
@@ -48,7 +49,7 @@ private enum MonogramStarsEntry: ItemListNodeEntry {
 
     var sortIndex: Int32 {
         switch self {
-        case let .header(index, _), let .footer(index, _), let .balance(index, _, _), let .action(index, _, _), let .operation(index, _, _, _), let .subscription(index, _, _, _):
+        case let .header(index, _), let .footer(index, _), let .balance(index, _, _), let .action(index, _, _), let .operation(index, _, _, _), let .subscription(index, _, _, _), let .fakeGiftSwitch(index, _, _):
             return index
         }
     }
@@ -67,6 +68,8 @@ private enum MonogramStarsEntry: ItemListNodeEntry {
             return a == e && b == f && c == g && d == h
         case let (.subscription(a, b, c, d), .subscription(e, f, g, h)):
             return a == e && b == f && c == g && d == h
+        case let (.fakeGiftSwitch(a, b, c), .fakeGiftSwitch(d, e, f)):
+            return a == d && b == e && c == f
         default:
             return false
         }
@@ -105,6 +108,10 @@ private enum MonogramStarsEntry: ItemListNodeEntry {
         case let .operation(_, id, title, label):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: label, sectionId: self.section, style: .blocks, action: {
                 arguments.editOperation(id)
+            })
+        case let .fakeGiftSwitch(_, title, value):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                MonogramLocalStars.shared.fakeGiftByDefault = value
             })
         case let .subscription(_, id, title, label):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: label, sectionId: self.section, style: .blocks, action: {
@@ -173,6 +180,7 @@ private func monogramStarsEntries(accountId: Int64) -> [MonogramStarsEntry] {
     entries.append(.action(1002, "Подарок из каталога", 2))
     entries.append(.action(1003, "Пополнение звёзд", 3))
     entries.append(.action(1004, "Покупка уникального подарка", 4))
+    entries.append(.fakeGiftSwitch(1005, "Фейк-подарки по умолчанию", store.fakeGiftByDefault))
     var index: Int32 = 1010
     for operation in store.operations(accountId: accountId).sorted(by: { $0.date > $1.date }) {
         entries.append(.operation(index, operation.id, operation.title + " · " + operation.subtitle, monogramStarsSignedText(operation.amount)))
