@@ -351,6 +351,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         precondition(!testIsLaunched)
         testIsLaunched = true
         MonogramDiagnostics.shared.start()
+        monogramLogSink = { category, message in
+            MonogramDiagnostics.shared.log(category, message)
+        }
         
         let _ = voipTokenPromise.get().start(next: { token in
             self.voipDeviceToken.set(.single(token))

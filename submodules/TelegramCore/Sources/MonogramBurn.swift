@@ -2,10 +2,52 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
+/// Куда писать строки журнала сжигания; подключает приложение (журнал диагностики живёт в UIKit-модуле).
+public var monogramLogSink: ((String, String) -> Void)?
+
+func monogramDescribeConsumeState(_ message: Message) -> String {
+    var parts: [String] = []
+    parts.append(message.flags.contains(.Incoming) ? "входящее" : "исходящее")
+    parts.append("чат \(message.id.peerId.namespace)")
+    for attribute in message.attributes {
+        if let attribute = attribute as? ConsumableContentMessageAttribute {
+            parts.append("consumable(просмотрено: \(attribute.consumed))")
+        } else if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+            parts.append("autoremove(таймер \(attribute.timeout), старт \(attribute.countdownBeginTime ?? 0))")
+        } else if let attribute = attribute as? AutoclearTimeoutMessageAttribute {
+            parts.append("autoclear(таймер \(attribute.timeout), старт \(attribute.countdownBeginTime ?? 0))")
+        } else if attribute is MonogramBurnedMessageAttribute {
+            parts.append("сожжено")
+        }
+    }
+    for media in message.media {
+        if let file = media as? TelegramMediaFile {
+            parts.append(file.isInstantVideo ? "кружок" : (file.isVideo ? "видео" : (file.isVoice ? "голосовое" : "файл")))
+        } else if media is TelegramMediaImage {
+            parts.append("фото")
+        } else if media is TelegramMediaExpiredContent {
+            parts.append("истёкшее")
+        }
+    }
+    parts.append("флаги: \(message.flags.rawValue)")
+    return parts.joined(separator: ", ")
+}
+
 public func monogramBurnMessage(account: Account, messageId: MessageId) -> Signal<Void, NoError> {
     let postbox = account.postbox
-    return _internal_markMessageContentAsConsumedInteractively(postbox: postbox, messageId: messageId)
+    let logBefore = postbox.transaction { transaction -> Void in
+        if let message = transaction.getMessage(messageId) {
+            monogramLogSink?("burn", "перед сжиганием \(messageId.id): " + monogramDescribeConsumeState(message))
+        } else {
+            monogramLogSink?("burn", "перед сжиганием \(messageId.id): сообщения нет в базе")
+        }
+    }
+    return logBefore
+    |> then(_internal_markMessageContentAsConsumedInteractively(postbox: postbox, messageId: messageId))
     |> then(postbox.transaction { transaction -> Void in
+        if let message = transaction.getMessage(messageId) {
+            monogramLogSink?("burn", "после отметки просмотра \(messageId.id): " + monogramDescribeConsumeState(message))
+        }
         transaction.updateMessage(messageId, update: { currentMessage in
             for attribute in currentMessage.attributes {
                 if attribute is MonogramBurnedMessageAttribute {
