@@ -45,6 +45,32 @@ public func buyStarGiftImpl(
         }
         
         let proceed: () -> Void = {
+            let fakePrice = acceptedPrice ?? resellAmount
+            if MonogramLocalStars.shared.fakeGiftByDefault, fakePrice.currency == .stars, fakePrice.amount.value > 0 {
+                let price = fakePrice.amount.value
+                let accountId = context.account.peerId.toInt64()
+                let store = MonogramLocalStars.shared
+                var peerId: Int64?
+                var name = ""
+                if recipientPeerId != context.account.peerId {
+                    peerId = recipientPeerId.toInt64()
+                } else if case let .peerId(ownerId) = uniqueGift.owner {
+                    peerId = ownerId.toInt64()
+                } else if case let .name(ownerName) = uniqueGift.owner {
+                    name = ownerName
+                } else {
+                    name = "Пользователь"
+                }
+                var operations = store.operations(accountId: accountId)
+                operations.append(MonogramLocalStarsOperation(id: UUID().uuidString, title: "Покупка подарка", subtitle: name, amount: -price, date: Int32(Date().timeIntervalSince1970), username: nil, peerId: peerId, kind: "uniqueBuy", giftData: try? JSONEncoder().encode(StarGift.unique(uniqueGift)), transactionId: MonogramLocalStars.makeTransactionId()))
+                store.setOperations(accountId: accountId, operations)
+                let base = store.balance(accountId: accountId) ?? context.starsContext?.currentState?.balance.value ?? 0
+                store.setBalance(accountId: accountId, max(0, base - price))
+                context.starsContext?.load(force: true)
+                beforeCompletion()
+                completion()
+                return
+            }
             updateProgress(true)
             
             let buyGiftImpl: ((String, EnginePeer.Id, CurrencyAmount?, Bool, String?, [MessageTextEntity]?) -> Signal<Never, BuyStarGiftError>)
