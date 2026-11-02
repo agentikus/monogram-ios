@@ -29,6 +29,11 @@ private extension StarsContext.State.Transaction {
     }
 }
 
+private final class MonogramHideLongPressRecognizer: UILongPressGestureRecognizer {
+    var transactionId: String = ""
+    var summary: String = ""
+}
+
 final class StarsTransactionsListPanelComponent: Component {
     typealias EnvironmentType = StarsTransactionsPanelEnvironment
         
@@ -254,6 +259,33 @@ final class StarsTransactionsListPanelComponent: Component {
         }
         
         private var highlightedItemId: AnyHashable?
+        @objc private func monogramHidePressed(_ recognizer: UILongPressGestureRecognizer) {
+            guard recognizer.state == .began, let recognizer = recognizer as? MonogramHideLongPressRecognizer, let component = self.component, !recognizer.transactionId.isEmpty else {
+                return
+            }
+            let transactionId = recognizer.transactionId
+            let accountId = component.context.account.peerId.toInt64()
+            let store = MonogramLocalStars.shared
+            let ownOperations = store.operations(accountId: accountId)
+            let ownIndex = ownOperations.firstIndex(where: { $0.transactionId == transactionId || "monogram-local-" + $0.id == transactionId })
+            let alert = UIAlertController(title: ownIndex == nil ? "Скрыть операцию?" : "Удалить свою операцию?", message: ownIndex == nil ? "Запись пропадёт из списка на этом телефоне; на сервере она остаётся. Вернуть: Monogram → Звёзды (локально) → Вернуть скрытые." : "Эта запись добавлена вами и пропадёт совсем.", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+            alert.addAction(UIAlertAction(title: ownIndex == nil ? "Скрыть" : "Удалить", style: .destructive, handler: { [weak self] _ in
+                if let ownIndex {
+                    var operations = ownOperations
+                    operations.remove(at: ownIndex)
+                    store.setOperations(accountId: accountId, operations)
+                } else {
+                    var hidden = store.hiddenIds(accountId: accountId)
+                    hidden.insert(transactionId)
+                    store.setHiddenIds(accountId: accountId, hidden)
+                }
+                self?.component?.transactionsContext.reload()
+                component.context.starsContext?.load(force: true)
+            }))
+            component.context.sharedContext.mainWindow?.presentNative(alert)
+        }
+
         private func updateHighlightedItem(itemId: AnyHashable?) {
             guard let environment = self.environment else {
                 return
@@ -597,6 +629,12 @@ final class StarsTransactionsListPanelComponent: Component {
                             }
                             self.scrollView.addSubview(itemComponentView)
                         }
+                        if !(itemComponentView.gestureRecognizers ?? []).contains(where: { $0 is MonogramHideLongPressRecognizer }) {
+                            let recognizer = MonogramHideLongPressRecognizer(target: self, action: #selector(self.monogramHidePressed(_:)))
+                            recognizer.minimumPressDuration = 0.6
+                            itemComponentView.addGestureRecognizer(recognizer)
+                        }
+                        (itemComponentView.gestureRecognizers ?? []).compactMap { $0 as? MonogramHideLongPressRecognizer }.first?.transactionId = item.id
                         itemTransition.setFrame(view: itemComponentView, frame: itemFrame)
                     }
                     let sideInset: CGFloat = 60.0 + environment.containerInsets.left
