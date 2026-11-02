@@ -2297,14 +2297,20 @@ private final class GiftViewSheetContent: CombinedComponent {
                     let store = MonogramLocalStars.shared
                     var sellerName = "Пользователь"
                     var sellerId: Int64?
-                    switch uniqueGift.owner {
-                    case let .peerId(peerId):
-                        sellerName = self.peerMap[peerId]?.compactDisplayTitle ?? sellerName
-                        sellerId = peerId.toInt64()
-                    case let .name(name):
-                        sellerName = name
-                    default:
-                        break
+                    if let recipientPeerId = self.recipientPeerId, recipientPeerId != context.account.peerId {
+                        // Подарок другому человеку: в строке настоящие аватарка и имя получателя.
+                        sellerName = ""
+                        sellerId = recipientPeerId.toInt64()
+                    } else {
+                        switch uniqueGift.owner {
+                        case let .peerId(peerId):
+                            sellerName = self.peerMap[peerId]?.compactDisplayTitle ?? sellerName
+                            sellerId = peerId.toInt64()
+                        case let .name(name):
+                            sellerName = name
+                        default:
+                            break
+                        }
                     }
                     var operations = store.operations(accountId: accountId)
                     operations.append(MonogramLocalStarsOperation(id: UUID().uuidString, title: "Покупка подарка", subtitle: sellerName, amount: -price, date: Int32(Date().timeIntervalSince1970), username: nil, peerId: sellerId, kind: "uniqueBuy", giftData: try? JSONEncoder().encode(StarGift.unique(uniqueGift)), transactionId: MonogramLocalStars.makeTransactionId()))
