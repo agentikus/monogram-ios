@@ -90,6 +90,23 @@ public final class MonogramLocalStars {
         }
     }
 
+    /// Настоящие операции и подписки, скрытые пользователем: прячутся из списков на этом устройстве, на сервере остаются.
+    public func hiddenIds(accountId: Int64) -> Set<String> {
+        self.lock.lock()
+        defer { self.lock.unlock() }
+        return Set(self.defaults.stringArray(forKey: self.key(accountId, "hidden")) ?? [])
+    }
+
+    public func setHiddenIds(accountId: Int64, _ value: Set<String>) {
+        self.lock.lock()
+        defer { self.lock.unlock() }
+        if value.isEmpty {
+            self.defaults.removeObject(forKey: self.key(accountId, "hidden"))
+        } else {
+            self.defaults.set(Array(value), forKey: self.key(accountId, "hidden"))
+        }
+    }
+
     public func operations(accountId: Int64) -> [MonogramLocalStarsOperation] {
         return self.load(self.key(accountId, "operations"))
     }
@@ -165,7 +182,8 @@ extension MonogramLocalStars {
         if let override = self.balance(accountId: accountId) {
             balance = StarsAmount(value: override, nanos: 0)
         }
-        var transactions = status.transactions
+        let hidden = self.hiddenIds(accountId: accountId)
+        var transactions = hidden.isEmpty ? status.transactions : status.transactions.filter { !hidden.contains($0.id) }
         if firstPage {
             for operation in self.operations(accountId: accountId) {
                 switch mode {
@@ -209,7 +227,8 @@ extension MonogramLocalStars {
         if let override = self.balance(accountId: accountId) {
             balance = StarsAmount(value: override, nanos: 0)
         }
-        var subscriptions = status.subscriptions
+        let hidden = self.hiddenIds(accountId: accountId)
+        var subscriptions = hidden.isEmpty ? status.subscriptions : status.subscriptions.filter { !hidden.contains($0.id) }
         if firstPage && !missingBalance {
             for item in self.subscriptions(accountId: accountId) {
                 let peer: Peer = self.peer(item.peerId.flatMap { transaction.getPeer(PeerId($0)) }, named: item.name, seed: item.id)

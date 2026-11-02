@@ -17,8 +17,12 @@ private final class MonogramStarsControllerArguments {
     let addGift: () -> Void
     let addTopUp: () -> Void
     let addUniqueGift: () -> Void
+    let hideReal: () -> Void
+    let restoreHidden: () -> Void
 
-    init(editBalance: @escaping () -> Void, addOperation: @escaping () -> Void, editOperation: @escaping (String) -> Void, addSubscription: @escaping () -> Void, editSubscription: @escaping (String) -> Void, addGift: @escaping () -> Void, addTopUp: @escaping () -> Void, addUniqueGift: @escaping () -> Void) {
+    init(editBalance: @escaping () -> Void, addOperation: @escaping () -> Void, editOperation: @escaping (String) -> Void, addSubscription: @escaping () -> Void, editSubscription: @escaping (String) -> Void, addGift: @escaping () -> Void, addTopUp: @escaping () -> Void, addUniqueGift: @escaping () -> Void, hideReal: @escaping () -> Void, restoreHidden: @escaping () -> Void) {
+        self.hideReal = hideReal
+        self.restoreHidden = restoreHidden
         self.addUniqueGift = addUniqueGift
         self.addGift = addGift
         self.addTopUp = addTopUp
@@ -101,6 +105,10 @@ private enum MonogramStarsEntry: ItemListNodeEntry {
                     arguments.addTopUp()
                 case 4:
                     arguments.addUniqueGift()
+                case 5:
+                    arguments.hideReal()
+                case 6:
+                    arguments.restoreHidden()
                 default:
                     arguments.addSubscription()
                 }
@@ -180,6 +188,11 @@ private func monogramStarsEntries(accountId: Int64) -> [MonogramStarsEntry] {
     entries.append(.action(1002, "Подарок из каталога", 2))
     entries.append(.action(1003, "Пополнение звёзд", 3))
     entries.append(.action(1004, "Покупка уникального подарка", 4))
+    entries.append(.action(1005, "Скрыть настоящую операцию или подписку", 5))
+    let hiddenCount = store.hiddenIds(accountId: accountId).count
+    if hiddenCount > 0 {
+        entries.append(.action(1006, "Вернуть скрытые (\(hiddenCount))", 6))
+    }
     entries.append(.fakeGiftSwitch(1005, "Фейк-подарки по умолчанию", store.fakeGiftByDefault))
     var index: Int32 = 1010
     for operation in store.operations(accountId: accountId).sorted(by: { $0.date > $1.date }) {
@@ -250,6 +263,73 @@ private final class MonogramGiftPickerController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         self.onSelect?(self.items[indexPath.row])
+    }
+}
+
+private struct MonogramRealItem {
+    let id: String
+    let title: String
+    let detail: String
+}
+
+/// Настоящие операции и подписки аккаунта: нажатие на строку скрывает её на этом устройстве.
+private final class MonogramRealItemPickerController: UITableViewController {
+    private let operations: [MonogramRealItem]
+    private let subscriptions: [MonogramRealItem]
+    var onSelect: ((MonogramRealItem) -> Void)?
+    var onCancel: (() -> Void)?
+
+    init(operations: [MonogramRealItem], subscriptions: [MonogramRealItem]) {
+        self.operations = operations
+        self.subscriptions = subscriptions
+        super.init(style: .insetGrouped)
+    }
+
+    required init?(coder: NSCoder) {
+        preconditionFailure()
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.title = "Что скрыть"
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Отмена", style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.tableView.register(UITableViewCell.self, forCellReuseIdentifier: "item")
+    }
+
+    @objc private func cancelPressed() {
+        self.onCancel?()
+    }
+
+    private func items(_ section: Int) -> [MonogramRealItem] {
+        return section == 0 ? self.operations : self.subscriptions
+    }
+
+    override func numberOfSections(in tableView: UITableView) -> Int {
+        return 2
+    }
+
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        let count = self.items(section).count
+        return (section == 0 ? "Операции" : "Подписки") + (count == 0 ? " (нет загруженных)" : "")
+    }
+
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.items(section).count
+    }
+
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "item", for: indexPath)
+        let item = self.items(indexPath.section)[indexPath.row]
+        var content = UIListContentConfiguration.subtitleCell()
+        content.text = item.title
+        content.secondaryText = item.detail
+        cell.contentConfiguration = content
+        return cell
+    }
+
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        self.onSelect?(self.items(indexPath.section)[indexPath.row])
     }
 }
 
@@ -572,6 +652,70 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
         present(alert)
     }
 
+    let askHideReal: () -> Void = {
+        let state = context.starsContext?.currentState
+        let ownIds = Set(store.operations(accountId: accountId).compactMap { $0.transactionId })
+        var operationItems: [MonogramRealItem] = []
+        for item in state?.transactions ?? [] {
+            if item.id.hasPrefix("monogram-local-") || ownIds.contains(item.id) {
+                continue
+            }
+            let name: String
+            switch item.peer {
+            case let .peer(peer):
+                name = peer.compactDisplayTitle
+            case .appStore:
+                name = "App Store"
+            case .playMarket:
+                name = "Google Play"
+            case .fragment:
+                name = "Fragment"
+            case .premiumBot:
+                name = "Premium Bot"
+            case .ads:
+                name = "Реклама"
+            default:
+                name = "Telegram"
+            }
+            var title = name
+            if let itemTitle = item.title, !itemTitle.isEmpty {
+                title = itemTitle + " · " + name
+            }
+            operationItems.append(MonogramRealItem(id: item.id, title: title, detail: monogramStarsSignedText(item.count.amount.value) + " · " + monogramStarsDateText(item.date)))
+        }
+        var subscriptionItems: [MonogramRealItem] = []
+        for item in state?.subscriptions ?? [] {
+            if item.id.hasPrefix("monogram-local-") {
+                continue
+            }
+            subscriptionItems.append(MonogramRealItem(id: item.id, title: item.peer.compactDisplayTitle, detail: "\(item.pricing.amount.value) ⭐️ · до " + monogramStarsDateText(item.untilDate)))
+        }
+        if operationItems.isEmpty && subscriptionItems.isEmpty {
+            let alert = UIAlertController(title: "Список пуст", message: "Откройте экран «Звёзды Telegram», дождитесь загрузки операций и повторите.", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert)
+            return
+        }
+        let picker = MonogramRealItemPickerController(operations: operationItems, subscriptions: subscriptionItems)
+        let navigation = UINavigationController(rootViewController: picker)
+        picker.onSelect = { item in
+            let confirm = UIAlertController(title: "Скрыть?", message: item.title + "\n" + item.detail + "\n\nЗапись пропадёт из списка на этом телефоне; на сервере и у Telegram она остаётся. Вернуть можно кнопкой «Вернуть скрытые».", preferredStyle: .alert)
+            confirm.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+            confirm.addAction(UIAlertAction(title: "Скрыть", style: .destructive, handler: { _ in
+                var hidden = store.hiddenIds(accountId: accountId)
+                hidden.insert(item.id)
+                store.setHiddenIds(accountId: accountId, hidden)
+                navigation.dismiss(animated: true)
+                reload()
+            }))
+            picker.present(confirm, animated: true)
+        }
+        picker.onCancel = {
+            navigation.dismiss(animated: true)
+        }
+        context.sharedContext.mainWindow?.presentNative(navigation)
+    }
+
     let arguments = MonogramStarsControllerArguments(editBalance: {
         let alert = UIAlertController(title: "Баланс звёзд", message: "Сколько звёзд показывать. Пусто — настоящий баланс.", preferredStyle: .alert)
         alert.addTextField { field in
@@ -606,6 +750,11 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
         askTopUp()
     }, addUniqueGift: {
         askUniqueGift()
+    }, hideReal: {
+        askHideReal()
+    }, restoreHidden: {
+        store.setHiddenIds(accountId: accountId, [])
+        reload()
     })
 
     let signal = combineLatest(queue: .mainQueue(),
