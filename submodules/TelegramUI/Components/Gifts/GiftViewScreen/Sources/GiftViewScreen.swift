@@ -2280,6 +2280,8 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
         }
         
+        private var realBuyConfirmed = false
+        
         func commitBuy(acceptedPrice: CurrencyAmount? = nil, skipConfirmation: Bool = false) {
             guard case let .unique(uniqueGift) = self.subject.arguments?.gift, let controller = self.getController() as? GiftViewScreen else {
                 return
@@ -2289,36 +2291,67 @@ private final class GiftViewSheetContent: CombinedComponent {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let giftTitle = "\(uniqueGift.title) #\(formatCollectibleNumber(uniqueGift.number, dateTimeFormat: presentationData.dateTimeFormat))"
 
-            if MonogramLocalStars.shared.fakeGiftByDefault {
-                let starsPrice = acceptedPrice ?? uniqueGift.resellAmounts?.first(where: { $0.currency == .stars })
-                if let starsPrice, starsPrice.currency == .stars, starsPrice.amount.value > 0 {
-                    let price = starsPrice.amount.value
-                    let accountId = context.account.peerId.toInt64()
-                    let store = MonogramLocalStars.shared
-                    var sellerName = "Пользователь"
-                    var sellerId: Int64?
-                    if let recipientPeerId = self.recipientPeerId, recipientPeerId != context.account.peerId {
-                        // Подарок другому человеку: в строке настоящие аватарка и имя получателя.
-                        sellerName = ""
-                        sellerId = recipientPeerId.toInt64()
-                    } else {
-                        switch uniqueGift.owner {
-                        case let .peerId(peerId):
-                            sellerName = self.peerMap[peerId]?.compactDisplayTitle ?? sellerName
-                            sellerId = peerId.toInt64()
-                        case let .name(name):
-                            sellerName = name
-                        default:
-                            break
+            let marketPrice = acceptedPrice ?? uniqueGift.resellAmounts?.first(where: { $0.currency == .stars })
+            if let marketPrice, marketPrice.currency == .stars, marketPrice.amount.value > 0 {
+                if self.realBuyConfirmed {
+                    self.realBuyConfirmed = false
+                } else {
+                    let price = marketPrice.amount.value
+                    let fakeBuy: () -> Void = { [weak self] in
+                        guard let self else {
+                            return
                         }
+                        let accountId = context.account.peerId.toInt64()
+                        let store = MonogramLocalStars.shared
+                        var sellerName = "Пользователь"
+                        var sellerId: Int64?
+                        if let recipientPeerId = self.recipientPeerId, recipientPeerId != context.account.peerId {
+                            // Подарок другому человеку: в строке настоящие аватарка и имя получателя.
+                            sellerName = ""
+                            sellerId = recipientPeerId.toInt64()
+                        } else {
+                            switch uniqueGift.owner {
+                            case let .peerId(peerId):
+                                sellerName = self.peerMap[peerId]?.compactDisplayTitle ?? sellerName
+                                sellerId = peerId.toInt64()
+                            case let .name(name):
+                                sellerName = name
+                            default:
+                                break
+                            }
+                        }
+                        var operations = store.operations(accountId: accountId)
+                        operations.append(MonogramLocalStarsOperation(id: UUID().uuidString, title: "Покупка подарка", subtitle: sellerName, amount: -price, date: Int32(Date().timeIntervalSince1970), username: nil, peerId: sellerId, kind: "uniqueBuy", giftData: try? JSONEncoder().encode(StarGift.unique(uniqueGift)), transactionId: MonogramLocalStars.makeTransactionId()))
+                        store.setOperations(accountId: accountId, operations)
+                        let base = store.balance(accountId: accountId) ?? context.starsContext?.currentState?.balance.value ?? 0
+                        store.setBalance(accountId: accountId, max(0, base - price))
+                        context.starsContext?.load(force: true)
+                        controller.dismiss()
                     }
-                    var operations = store.operations(accountId: accountId)
-                    operations.append(MonogramLocalStarsOperation(id: UUID().uuidString, title: "Покупка подарка", subtitle: sellerName, amount: -price, date: Int32(Date().timeIntervalSince1970), username: nil, peerId: sellerId, kind: "uniqueBuy", giftData: try? JSONEncoder().encode(StarGift.unique(uniqueGift)), transactionId: MonogramLocalStars.makeTransactionId()))
-                    store.setOperations(accountId: accountId, operations)
-                    let base = store.balance(accountId: accountId) ?? context.starsContext?.currentState?.balance.value ?? 0
-                    store.setBalance(accountId: accountId, max(0, base - price))
-                    context.starsContext?.load(force: true)
-                    controller.dismiss()
+                    if MonogramLocalStars.shared.fakeGiftByDefault {
+                        fakeBuy()
+                        return
+                    }
+                    let choice = textAlertController(
+                        context: context,
+                        title: giftTitle,
+                        text: "Купить по-настоящему или сделать фейк-покупку (только у вас в «Звёздах»)?",
+                        actions: [
+                            TextAlertAction(type: .defaultAction, title: "Фейк-покупка (Monogram)", action: {
+                                fakeBuy()
+                            }),
+                            TextAlertAction(type: .genericAction, title: "Настоящая покупка", action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.realBuyConfirmed = true
+                                self.commitBuy(acceptedPrice: acceptedPrice, skipConfirmation: skipConfirmation)
+                            }),
+                            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {})
+                        ],
+                        actionLayout: .vertical
+                    )
+                    controller.present(choice, in: .window(.root))
                     return
                 }
             }
