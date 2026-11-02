@@ -653,6 +653,17 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
     }
 
     let askHideReal: () -> Void = {
+        // starsContext подписки не загружает (у него всегда пустой список), поэтому берём их отдельным запросом
+        let subscriptionsContext = context.engine.payments.peerStarsSubscriptionsContext(starsContext: nil)
+        let subscriptionsDisposable = MetaDisposable()
+        subscriptionsDisposable.set((subscriptionsContext.state
+        |> filter { !$0.isLoading }
+        |> take(1)
+        |> map { Optional($0) }
+        |> timeout(8.0, queue: Queue.mainQueue(), alternate: .single(nil))
+        |> deliverOnMainQueue).startStrict(next: { loadedSubscriptions in
+        withExtendedLifetime(subscriptionsContext) {}
+        subscriptionsDisposable.dispose()
         let state = context.starsContext?.currentState
         let ownIds = Set(store.operations(accountId: accountId).compactMap { $0.transactionId })
         var operationItems: [MonogramRealItem] = []
@@ -684,7 +695,7 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
             operationItems.append(MonogramRealItem(id: item.id, title: title, detail: monogramStarsSignedText(item.count.amount.value) + " · " + monogramStarsDateText(item.date)))
         }
         var subscriptionItems: [MonogramRealItem] = []
-        for item in state?.subscriptions ?? [] {
+        for item in loadedSubscriptions?.subscriptions ?? [] {
             if item.id.hasPrefix("monogram-local-") {
                 continue
             }
@@ -714,6 +725,7 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
             navigation.dismiss(animated: true)
         }
         context.sharedContext.mainWindow?.presentNative(navigation)
+        }))
     }
 
     let arguments = MonogramStarsControllerArguments(editBalance: {
