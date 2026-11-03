@@ -4,9 +4,11 @@ import Postbox
 import TelegramCore
 import AccountContext
 
-private func isSignaFolderTitle(_ title: String) -> Bool {
-    let lowercased = title.lowercased()
-    return false
+private func isBadgeFolderTitle(_ title: String, keyword: String) -> Bool {
+    if keyword.isEmpty {
+        return false
+    }
+    return title.lowercased().contains(keyword)
 }
 
 private func isChatMuted(transaction: Transaction, peer: Peer, globalSettings: GlobalNotificationSettingsSet) -> Bool {
@@ -37,6 +39,7 @@ private func isChatMuted(transaction: Transaction, peer: Peer, globalSettings: G
 
 public func monogramFolderExtraUnreadCount(context: AccountContext) -> Signal<Int32, NoError> {
     let accountPeerId = context.account.peerId
+    let keyword = MonogramSettings.shared.accountBadgeFolderKeyword.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     let unreadKey: PostboxViewKey = .unreadCounts(items: [.totalInGroup(.root), .totalInGroup(Namespaces.PeerGroup.archive)])
     return combineLatest(
         context.engine.peers.updatedChatListFilters() |> distinctUntilChanged,
@@ -45,7 +48,7 @@ public func monogramFolderExtraUnreadCount(context: AccountContext) -> Signal<In
     |> mapToSignal { filters, _ -> Signal<Int32, NoError> in
         var folders: [ChatListFilterData] = []
         for filter in filters {
-            if case let .filter(_, title, _, data) = filter, isSignaFolderTitle(title.text) {
+            if case let .filter(_, title, _, data) = filter, isBadgeFolderTitle(title.text, keyword: keyword) {
                 folders.append(data)
             }
         }

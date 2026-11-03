@@ -341,6 +341,15 @@ public final class MonogramSettings {
         }
     }
     
+    public var accountBadgeFolderKeyword: String {
+        get {
+            return self.defaults.string(forKey: "monogram_accountBadgeFolder") ?? ""
+        }
+        set {
+            self.defaults.set(newValue, forKey: "monogram_accountBadgeFolder")
+        }
+    }
+    
     public var localTranscription: Bool {
         get {
             return self.cachedBool("monogram_localTranscription", true)

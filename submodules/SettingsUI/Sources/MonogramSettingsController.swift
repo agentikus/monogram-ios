@@ -87,6 +87,7 @@ private enum MonogramSettingsOption: Int32 {
     case diagnostics
     case openClaude
     case openStars
+    case setBadgeFolder
 }
 
 private enum MonogramSettingsEntry: ItemListNodeEntry {
@@ -243,6 +244,9 @@ private func monogramSettingsEntries(accountId: Int64) -> [MonogramSettingsEntry
     entries.append(.choice(408, .cycleTranslation, "Переводчик", MonogramSettings.translationProviders.first(where: { $0.0 == settings.translationProvider })?.1 ?? settings.translationProvider))
     entries.append(.footer(411, "Запланированная отправка: в режиме призрака сообщения уходят как запланированные через ~12 секунд, чтобы не отмечать вас онлайн. Фильтры скрывают входящие сообщения с указанным текстом; регулярные выражения пишутся в виде /шаблон/. Часть изменений применяется после перезапуска. «Сохранять из защищённых чатов» снимает запрет на копирование и сохранение медиа в группах и секретных чатах; пересылка запрещена самим сервером."))
 
+    entries.append(.header(496, "СПИСОК АККАУНТОВ"))
+    entries.append(.choice(497, .setBadgeFolder, "Папка для счётчика аккаунтов", MonogramSettings.shared.accountBadgeFolderKeyword.isEmpty ? "не выбрана" : MonogramSettings.shared.accountBadgeFolderKeyword))
+
     return entries
 }
 
@@ -351,6 +355,18 @@ public func monogramSettingsController(context: AccountContext) -> ViewControlle
             MonogramDiagnostics.shared.isEnabled = value
         case .openStars:
             pushControllerImpl?(monogramStarsController(context: context))
+        case .setBadgeFolder:
+            let alert = UIAlertController(title: "Папка для счётчика", message: "Часть названия папки. Её замьюченные и архивные чаты добавятся к числу непрочитанных у аккаунта в списке аккаунтов. Пусто — выключено.", preferredStyle: .alert)
+            alert.addTextField { field in
+                field.text = MonogramSettings.shared.accountBadgeFolderKeyword
+            }
+            alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Готово", style: .default, handler: { _ in
+                MonogramSettings.shared.accountBadgeFolderKeyword = (alert.textFields?.first?.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                refreshCounter += 1
+                refresh.set(refreshCounter)
+            }))
+            context.sharedContext.mainWindow?.presentNative(alert)
         case .openClaude:
             pushControllerImpl?(monogramClaudeController(context: context))
         case .cycleTranslation:
