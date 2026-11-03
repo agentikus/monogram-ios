@@ -7,15 +7,20 @@ import AccountContext
 public let maximumNumberOfAccounts = 10
 public let maximumPremiumNumberOfAccounts = 4
 
+/// Дополнительное число непрочитанных для бейджа аккаунта в списке аккаунтов (Monogram: чаты выбранной папки,
+/// которые обычный счётчик не учитывает). Устанавливается один раз при старте, до запуска аккаунтов.
+public var accountListExtraUnreadCount: ((AccountContext) -> Signal<Int32, NoError>)?
+
 public func activeAccountsAndPeers(context: AccountContext, includePrimary: Bool = false) -> Signal<((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)]), NoError> {
     let sharedContext = context.sharedContext
     return context.sharedContext.activeAccountContexts
     |> mapToSignal { primary, activeAccounts, _ -> Signal<((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)]), NoError> in
         var accounts: [Signal<(AccountContext, EnginePeer, Int32)?, NoError>] = []
         func accountWithPeer(_ context: AccountContext) -> Signal<(AccountContext, EnginePeer, Int32)?, NoError> {
-            return combineLatest(context.account.postbox.peerView(id: context.account.peerId), renderedTotalUnreadCount(accountManager: sharedContext.accountManager, engine: context.engine))
-            |> map { view, totalUnreadCount -> (EnginePeer?, Int32) in
-                return (view.peers[view.peerId].flatMap(EnginePeer.init), totalUnreadCount.0)
+            let extraUnreadCount: Signal<Int32, NoError> = accountListExtraUnreadCount?(context) ?? .single(0)
+            return combineLatest(context.account.postbox.peerView(id: context.account.peerId), renderedTotalUnreadCount(accountManager: sharedContext.accountManager, engine: context.engine), extraUnreadCount)
+            |> map { view, totalUnreadCount, extraUnreadCount -> (EnginePeer?, Int32) in
+                return (view.peers[view.peerId].flatMap(EnginePeer.init), totalUnreadCount.0 + extraUnreadCount)
             }
             |> distinctUntilChanged { lhs, rhs in
                 if lhs.0 != rhs.0 {

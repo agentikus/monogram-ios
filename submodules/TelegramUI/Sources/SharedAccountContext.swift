@@ -16,6 +16,7 @@ import DeviceLocationManager
 import ItemListUI
 import LegacyUI
 import ChatListUI
+import AccountUtils
 import PeerInfoUI
 import SettingsUI
 import PasscodeUI
@@ -319,6 +320,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 
         precondition(!testHasInstance)
         testHasInstance = true
+        
+        accountListExtraUnreadCount = { context in
+            return monogramFolderExtraUnreadCount(context: context)
+        }
         
         self.appDelegate = appDelegate
         self.mainWindow = mainWindow
