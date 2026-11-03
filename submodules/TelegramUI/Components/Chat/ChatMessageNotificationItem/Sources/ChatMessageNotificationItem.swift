@@ -26,6 +26,7 @@ public final class ChatMessageNotificationItem: NotificationItem {
     public let nameDisplayOrder: PresentationPersonNameOrder
     public let messages: [EngineRawMessage]
     public let threadData: EngineMessageHistoryThreadData?
+    public let accountLabel: String?
     public let tapAction: () -> Bool
     public let expandAction: (@escaping () -> (ASDisplayNode?, () -> Void)) -> Void
     
@@ -33,13 +34,14 @@ public final class ChatMessageNotificationItem: NotificationItem {
         return messages.first?.id.peerId
     }
     
-    public init(context: AccountContext, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, messages: [EngineRawMessage], threadData: EngineMessageHistoryThreadData?, tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
+    public init(context: AccountContext, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, messages: [EngineRawMessage], threadData: EngineMessageHistoryThreadData?, accountLabel: String? = nil, tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
         self.context = context
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.messages = messages
         self.threadData = threadData
+        self.accountLabel = accountLabel
         self.tapAction = tapAction
         self.expandAction = expandAction
     }
@@ -403,6 +405,9 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             attributedMessageText = NSAttributedString(string: messageText.replacingOccurrences(of: "\n\n", with: " "), font: textFont, textColor: textColor)
         }
                 
+        if let accountLabel = item.accountLabel, !accountLabel.isEmpty {
+            title = accountLabel + " · " + (title ?? "")
+        }
         self.titleAttributedText = NSAttributedString(string: title ?? "", font: compact ? Font.semibold(15.0) : Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
         
         let imageNodeLayout = self.imageNode.asyncLayout()

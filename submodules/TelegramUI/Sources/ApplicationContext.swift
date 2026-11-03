@@ -116,6 +116,9 @@ final class AuthorizedApplicationContext {
     private let loggedOutDisposable = MetaDisposable()
     private let inAppNotificationSettingsDisposable = MetaDisposable()
     private let notificationMessagesDisposable = MetaDisposable()
+    private let otherAccountsNotificationsDisposable = MetaDisposable()
+    private let otherAccountNotificationLabelDisposable = MetaDisposable()
+    private var otherAccountNotificationDisposables: [AccountRecordId: Disposable] = [:]
     private let termsOfServiceUpdatesDisposable = MetaDisposable()
     private let termsOfServiceProceedToBotDisposable = MetaDisposable()
     private let watchNavigateToMessageDisposable = MetaDisposable()
@@ -513,6 +516,33 @@ final class AuthorizedApplicationContext {
             }
         }))
         
+        let primaryAccountId = context.account.id
+        self.otherAccountsNotificationsDisposable.set((context.sharedContext.activeAccountContexts
+        |> deliverOnMainQueue).start(next: { [weak self] _, accounts, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            let others = accounts.filter { $0.0 != primaryAccountId }
+            for (id, disposable) in strongSelf.otherAccountNotificationDisposables {
+                if !others.contains(where: { $0.0 == id }) {
+                    disposable.dispose()
+                    strongSelf.otherAccountNotificationDisposables.removeValue(forKey: id)
+                }
+            }
+            for (id, accountContext, _) in others {
+                if strongSelf.otherAccountNotificationDisposables[id] != nil {
+                    continue
+                }
+                strongSelf.otherAccountNotificationDisposables[id] = (accountContext.account.stateManager.notificationMessages
+                |> deliverOnMainQueue).start(next: { [weak self, weak accountContext] messageList in
+                    guard let strongSelf = self, let accountContext = accountContext else {
+                        return
+                    }
+                    strongSelf.presentNotificationForOtherAccount(accountContext: accountContext, messageList: messageList)
+                })
+            }
+        }))
+
         self.termsOfServiceUpdatesDisposable.set((context.account.stateManager.termsOfServiceUpdate
         |> deliverOnMainQueue).start(next: { [weak self] termsOfServiceUpdate in
             guard let strongSelf = self, strongSelf.currentTermsOfServiceUpdate != termsOfServiceUpdate else {
@@ -828,6 +858,81 @@ final class AuthorizedApplicationContext {
         }
     }
     
+    private func presentNotificationForOtherAccount(accountContext: AccountContext, messageList: [([Message], PeerGroupId, Bool, MessageHistoryThreadData?)]) {
+        guard UIApplication.shared.applicationState == .active else {
+            return
+        }
+        guard let (messages, _, notify, threadData) = messageList.last, let firstMessage = messages.first, notify else {
+            return
+        }
+        let isMuted = firstMessage.attributes.contains(where: { attribute in
+            if let attribute = attribute as? NotificationInfoMessageAttribute {
+                return attribute.flags.contains(.muted)
+            } else {
+                return false
+            }
+        })
+        if isMuted {
+            return
+        }
+        if firstMessage.id.peerId == accountContext.account.peerId, !firstMessage.flags.contains(.WasScheduled) {
+            return
+        }
+        if let forwardInfo = firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported) {
+            return
+        }
+        for media in firstMessage.media {
+            if let action = media as? TelegramMediaAction {
+                if case .messageAutoremoveTimeoutUpdated = action.action {
+                    return
+                } else if case .conferenceCall = action.action {
+                    return
+                }
+            }
+        }
+        if firstMessage.restrictionReason(platform: "ios", contentSettings: accountContext.currentContentSettings.with { $0 }) != nil {
+            return
+        }
+
+        let inAppNotificationSettings = self.inAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+        guard let appLockContext = self.context.sharedContext.appLockContext as? AppLockContextImpl else {
+            return
+        }
+        let accountId = accountContext.account.id
+        let peerId = firstMessage.id.peerId
+        let messageId = firstMessage.id
+
+        self.otherAccountNotificationLabelDisposable.set((combineLatest(
+            appLockContext.isCurrentlyLocked |> take(1),
+            accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: accountContext.account.peerId)) |> take(1)
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] locked, accountPeer in
+            guard let strongSelf = self, !locked else {
+                return
+            }
+            if inAppNotificationSettings.playSounds {
+                serviceSoundManager.playIncomingMessageSound()
+            }
+            if inAppNotificationSettings.vibrate {
+                serviceSoundManager.playVibrationSound()
+            }
+            guard inAppNotificationSettings.displayPreviews else {
+                return
+            }
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+            let label = accountPeer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: accountContext, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, threadData: threadData, accountLabel: label, tapAction: {
+                guard let strongSelf = self else {
+                    return false
+                }
+                strongSelf.notificationController.removeItemsWithGroupingKey(peerId)
+                strongSelf.context.sharedContext.navigateToChat(accountId: accountId, peerId: peerId, messageId: messageId)
+                return false
+            }, expandAction: { _ in
+            }))
+        }))
+    }
+
     deinit {
         self.context.account.postbox.clearCaches()
         self.context.account.shouldKeepOnlinePresence.set(.single(false))
@@ -835,6 +940,11 @@ final class AuthorizedApplicationContext {
         self.loggedOutDisposable.dispose()
         self.inAppNotificationSettingsDisposable.dispose()
         self.notificationMessagesDisposable.dispose()
+        self.otherAccountsNotificationsDisposable.dispose()
+        self.otherAccountNotificationLabelDisposable.dispose()
+        for (_, disposable) in self.otherAccountNotificationDisposables {
+            disposable.dispose()
+        }
         self.termsOfServiceUpdatesDisposable.dispose()
         self.passcodeLockDisposable.dispose()
         self.passcodeStatusDisposable.dispose()
