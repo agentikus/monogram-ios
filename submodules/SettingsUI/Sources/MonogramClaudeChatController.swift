@@ -29,7 +29,6 @@ private func monogramClaudeTimeText(_ timestamp: Int32) -> String {
     return monogramClaudeTimeFormatter.string(from: Date(timeIntervalSince1970: Double(timestamp)))
 }
 
-/// Цвета фона чата из обоев, выбранных в настройках (цвет, градиент или фон узорных обоев).
 private func monogramClaudeWallpaperColors(_ wallpaper: TelegramWallpaper, theme: PresentationTheme) -> [UIColor] {
     var values: [UInt32] = []
     switch wallpaper {
@@ -130,7 +129,6 @@ private final class MonogramClaudeBubbleCell: UITableViewCell, UIContextMenuInte
 
     func configure(text: String, time: String, outgoing: Bool, italic: Bool, fill: [UIColor], textColor: UIColor, timeColor: UIColor, checkColor: UIColor?) {
         self.copyText = italic ? nil : text
-        // Место под время в последней строке: оно рисуется поверх этих неразрывных пробелов.
         let reserve = time.isEmpty ? 0 : (outgoing ? 12 : 8)
         self.label.text = text + String(repeating: "\u{00A0}", count: reserve)
         self.label.font = italic ? UIFont.italicSystemFont(ofSize: 15.0) : UIFont.systemFont(ofSize: 16.0)
@@ -354,7 +352,6 @@ private final class MonogramClaudeChatNode: ASDisplayNode, UITableViewDataSource
         self.tableView.scrollToRow(at: index, at: .bottom, animated: animated)
     }
 
-    // MARK: - Layout
 
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let previousInput = self.validLayout?.0.inputHeight ?? 0.0
@@ -407,7 +404,6 @@ private final class MonogramClaudeChatNode: ASDisplayNode, UITableViewDataSource
         }
     }
 
-    // MARK: - Table
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return self.rows.count
@@ -432,7 +428,6 @@ private final class MonogramClaudeChatNode: ASDisplayNode, UITableViewDataSource
         return cell
     }
 
-    // MARK: - Input
 
     func textViewDidChange(_ textView: UITextView) {
         self.updateControls()

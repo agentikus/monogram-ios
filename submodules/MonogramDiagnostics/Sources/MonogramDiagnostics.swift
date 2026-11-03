@@ -4,8 +4,6 @@ import MetricKit
 import MachO
 import os
 
-/// Журнал диагностики (нагрев, нагрузка, действия, ошибки, зависания). Выключен по умолчанию.
-/// Пишет в Documents/Logs (видно в «Файлы → На iPhone → Monogram») и копирует в папку архива, если она выбрана.
 public final class MonogramDiagnostics: NSObject {
     public static let shared = MonogramDiagnostics()
 
@@ -81,7 +79,6 @@ public final class MonogramDiagnostics: NSObject {
         }
     }
 
-    /// Вызывается при запуске приложения: ничего не делает, пока журнал выключен.
     public func start() {
         if !self.isEnabled {
             return
@@ -101,7 +98,6 @@ public final class MonogramDiagnostics: NSObject {
         }
     }
 
-    // MARK: - Запуск и остановка
 
     private func startOnMain() {
         self.stateLock.lock()
@@ -222,7 +218,6 @@ public final class MonogramDiagnostics: NSObject {
         }
     }
 
-    // MARK: - Таймеры
 
     private func startTimers() {
         let sampler = DispatchSource.makeTimerSource(queue: self.queue)
@@ -302,7 +297,6 @@ public final class MonogramDiagnostics: NSObject {
         }
     }
 
-    // MARK: - Замеры
 
     private func cpuUsage() -> (percent: Double, threads: Int) {
         var threadList: thread_act_array_t?
@@ -350,7 +344,6 @@ public final class MonogramDiagnostics: NSObject {
         return "\(Int(Double(info.phys_footprint) / 1048576.0)) МБ (до лимита \(available) МБ)\(growth)"
     }
 
-    // MARK: - Потоки и стеки
 
     private struct ThreadSnapshot {
         let port: thread_act_t
@@ -410,7 +403,6 @@ public final class MonogramDiagnostics: NSObject {
         }
     }
 
-    /// Стек чужого потока по цепочке frame pointer. Пока поток остановлен, память не выделяется.
     private func backtrace(of thread: thread_act_t, depth: Int) -> [UInt] {
         #if arch(arm64)
         var frames = [UInt]()
@@ -567,7 +559,6 @@ public final class MonogramDiagnostics: NSObject {
         return String(cString: buffer)
     }
 
-    // MARK: - Файлы
 
     private func localLogsDirectory() -> URL {
         let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSTemporaryDirectory())
@@ -608,7 +599,6 @@ public final class MonogramDiagnostics: NSObject {
         let line = "[\(self.lineFormatter.string(from: date))] [\(category)] \(message)\n"
         let name = "monogram-\(day).log"
         self.append(line, to: self.localLogsDirectory().appendingPathComponent(name))
-        // Копия в iCloud Drive пишется пачками: каждая запись туда будит системную синхронизацию.
         if self.externalPendingName != name {
             self.flushExternal()
             self.externalPendingName = name

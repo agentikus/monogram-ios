@@ -35,9 +35,6 @@ private func isChatMuted(transaction: Transaction, peer: Peer, globalSettings: G
     return false
 }
 
-/// Непрочитанные сообщения чатов выбранной папки, которые обычный бейдж аккаунта не считает: замьюченные чаты
-/// корневого списка и все чаты архива (архив в общий счётчик корня не входит). Размьюченные чаты корня
-/// уже посчитаны обычным бейджем, поэтому здесь они пропускаются, чтобы не считать дважды.
 public func monogramFolderExtraUnreadCount(context: AccountContext) -> Signal<Int32, NoError> {
     let accountPeerId = context.account.peerId
     let unreadKey: PostboxViewKey = .unreadCounts(items: [.totalInGroup(.root), .totalInGroup(Namespaces.PeerGroup.archive)])

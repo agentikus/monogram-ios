@@ -7,8 +7,6 @@ import AccountContext
 public let maximumNumberOfAccounts = 10
 public let maximumPremiumNumberOfAccounts = 4
 
-/// Дополнительное число непрочитанных для бейджа аккаунта в списке аккаунтов (Monogram: чаты выбранной папки,
-/// которые обычный счётчик не учитывает). Устанавливается один раз при старте, до запуска аккаунтов.
 public var accountListExtraUnreadCount: ((AccountContext) -> Signal<Int32, NoError>)?
 
 public func activeAccountsAndPeers(context: AccountContext, includePrimary: Bool = false) -> Signal<((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)]), NoError> {

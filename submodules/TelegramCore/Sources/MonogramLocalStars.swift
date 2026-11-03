@@ -9,11 +9,8 @@ public struct MonogramLocalStarsOperation: Codable, Equatable {
     public var date: Int32
     public var username: String?
     public var peerId: Int64?
-    /// nil — обычная запись; "appStore" и "premiumBot" — пополнение с соответствующим источником.
     public var kind: String?
-    /// JSON настоящего подарка из каталога (`StarGift`): строка рисуется как подарок со стикером.
     public var giftData: Data?
-    /// ID сделки, который показывается в окне операции; без него виден служебный ID записи.
     public var transactionId: String?
 
     public init(id: String, title: String, subtitle: String, amount: Int64, date: Int32, username: String? = nil, peerId: Int64? = nil, kind: String? = nil, giftData: Data? = nil, transactionId: String? = nil) {
@@ -50,8 +47,6 @@ public struct MonogramLocalStarsSubscription: Codable, Equatable {
     }
 }
 
-/// Локальные звёзды: подмена баланса, свои операции и подписки. Хранится отдельно для каждого аккаунта
-/// и только на устройстве; серверный баланс и реальные покупки не затрагивает.
 public final class MonogramLocalStars {
     public static let shared = MonogramLocalStars()
 
@@ -80,7 +75,6 @@ public final class MonogramLocalStars {
         }
     }
 
-    /// Если включено, переключатель «Фейк-подарок» в экране отправки подарка стоит включённым сразу.
     public var fakeGiftByDefault: Bool {
         get {
             return self.defaults.bool(forKey: "monogram_localStars_fakeGiftDefault")
@@ -90,7 +84,6 @@ public final class MonogramLocalStars {
         }
     }
 
-    /// Настоящие операции и подписки, скрытые пользователем: прячутся из списков на этом устройстве, на сервере остаются.
     public func hiddenIds(accountId: Int64) -> Set<String> {
         self.lock.lock()
         defer { self.lock.unlock() }
@@ -140,8 +133,6 @@ public final class MonogramLocalStars {
         }
     }
 
-    /// Настоящий пользователь, найденный по юзернейму, даёт строке только аватарку: имя в строке всегда то,
-    /// которое ввёл сам пользователь, а ник и остальные признаки настоящего аккаунта не переносятся.
     func peer(_ real: Peer?, named name: String, seed: String) -> Peer {
         guard let real = real else {
             return self.fakePeer(seed: seed, name: name)
@@ -152,7 +143,6 @@ public final class MonogramLocalStars {
         return TelegramUser(id: user.id, accessHash: user.accessHash, firstName: name, lastName: nil, username: nil, phone: nil, photo: user.photo, botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: user.nameColor, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
     }
 
-    /// ID сделки в том виде, как его показывает Telegram: «stx» и url-безопасный base64 из 32 случайных байт.
     public static func makeTransactionId() -> String {
         let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
         var result = "stx"
@@ -162,7 +152,6 @@ public final class MonogramLocalStars {
         return result
     }
 
-    /// Выдуманный пользователь для названия в строке: у локальной записи нет настоящего собеседника.
     func fakePeer(seed: String, name: String) -> TelegramUser {
         var hash: UInt64 = 1469598103934665603
         for byte in seed.utf8 {

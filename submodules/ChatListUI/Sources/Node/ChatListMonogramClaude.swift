@@ -2,11 +2,8 @@ import Foundation
 import Postbox
 import TelegramCore
 
-// Служебный peer-id строки «Claude» в списке чатов. Это не настоящий чат: строка рисуется обычным
-// элементом списка, а нажатие перехватывается и открывает экран ИИ.
 public let monogramClaudePeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(4_000_000_000_777))
 
-// Задаётся из TelegramUI (ChatListUI не зависит от SettingsUI).
 public var monogramClaudeOpenHandler: (() -> Void)?
 
 func monogramClaudeRenderedPeer() -> EngineRenderedPeer {

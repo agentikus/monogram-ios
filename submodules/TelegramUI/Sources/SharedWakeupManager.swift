@@ -1141,7 +1141,6 @@ public final class SharedWakeupManager {
             for (account, primary, tasks) in self.accountsAndTasks {
                 account.postbox.setCanBeginTransactions(true)
                 
-                // Monogram: в foreground соединение держат все аккаунты, иначе неактивные не получают сообщения (баннеры, счётчики)
                 if self.inForeground || !tasks.isEmpty || (self.activeExplicitExtensionTimer != nil && primary) {
                     account.shouldBeServiceTaskMaster.set(.single(.always))
                 } else {

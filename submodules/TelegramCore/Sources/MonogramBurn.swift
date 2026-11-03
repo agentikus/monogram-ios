@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-/// Куда писать строки журнала сжигания; подключает приложение (журнал диагностики живёт в UIKit-модуле).
 public var monogramLogSink: ((String, String) -> Void)?
 
 func monogramDescribeConsumeState(_ message: Message) -> String {

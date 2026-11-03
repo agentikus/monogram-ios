@@ -220,7 +220,6 @@ private struct MonogramGiftPickerItem {
     let gift: StarGift
 }
 
-/// Список подарков каталога с ценой: выбор подставляет в запись сумму и стикер настоящего подарка.
 private final class MonogramGiftPickerController: UITableViewController {
     private let items: [MonogramGiftPickerItem]
     var onSelect: ((MonogramGiftPickerItem) -> Void)?
@@ -272,7 +271,6 @@ private struct MonogramRealItem {
     let detail: String
 }
 
-/// Настоящие операции и подписки аккаунта: нажатие на строку скрывает её на этом устройстве.
 private final class MonogramRealItemPickerController: UITableViewController {
     private let operations: [MonogramRealItem]
     private let subscriptions: [MonogramRealItem]
@@ -495,7 +493,6 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
         present(alert)
     }
 
-    // Фейк-операции меняют показываемый баланс: за основу берётся заданный вручную или тот, что виден сейчас.
     let shiftBalance: (Int64) -> Void = { delta in
         let base = store.balance(accountId: accountId) ?? context.starsContext?.currentState?.balance.value ?? 0
         store.setBalance(accountId: accountId, max(0, base + delta))
@@ -653,7 +650,6 @@ public func monogramStarsController(context: AccountContext) -> ViewController {
     }
 
     let askHideReal: () -> Void = {
-        // starsContext подписки не загружает (у него всегда пустой список), поэтому берём их отдельным запросом
         let subscriptionsContext = context.engine.payments.peerStarsSubscriptionsContext(starsContext: nil)
         let subscriptionsDisposable = MetaDisposable()
         subscriptionsDisposable.set((subscriptionsContext.state

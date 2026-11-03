@@ -38,7 +38,6 @@ final class MonogramPhotoPickerDelegate: NSObject, UIImagePickerControllerDelega
 
 var monogramPhotoPickerHolder: MonogramPhotoPickerDelegate?
 
-/// Уменьшает фото до 1568 px по длинной стороне и кодирует в JPEG base64 (меньше токенов и трафика).
 func monogramEncodeImage(_ image: UIImage) -> String? {
     let size = image.size
     if size.width < 1.0 || size.height < 1.0 {
@@ -59,15 +58,12 @@ func monogramClaudeSend(apiKey: String, model: String, effort: String, messages:
         completion(.failure(MonogramClaudeError(text: "Неверный адрес API")))
         return
     }
-    // Настоящее усилие: output_config.effort (GA, без beta-заголовка). Мышление остаётся адаптивным по умолчанию.
-    // Если API отклонит этот параметр, запрос один раз повторяется без него.
     var body: [String: Any] = [
         "model": model,
         "max_tokens": 16000,
         "system": "Отвечай на языке пользователя.",
         "output_config": ["effort": effort],
         "messages": messages.enumerated().map { index, message -> [String: Any] in
-            // Фото отправляется только в последнем сообщении, в старых остаётся пометка (экономия токенов).
             if let image = message.imageBase64, index == messages.count - 1 {
                 return ["role": message.role, "content": [
                     ["type": "image", "source": ["type": "base64", "media_type": "image/jpeg", "data": image]],

@@ -2306,7 +2306,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                         var sellerName = "Пользователь"
                         var sellerId: Int64?
                         if let recipientPeerId = self.recipientPeerId, recipientPeerId != context.account.peerId {
-                            // Подарок другому человеку: в строке настоящие аватарка и имя получателя.
                             sellerName = ""
                             sellerId = recipientPeerId.toInt64()
                         } else {

@@ -10,9 +10,6 @@ private struct TranscriptionResult {
     var isFinal: Bool
 }
 
-/// Склеивает частичные результаты распознавания. После паузы `SFSpeechRecognizer` начинает транскрипцию
-/// заново: первый сегмент нового результата начинается позже первого сегмента предыдущего (его начало
-/// отброшено), и без склейки в итоге остаётся только хвост записи.
 private final class TranscriptionAccumulator {
     private static let restartThreshold: TimeInterval = 0.75
 
@@ -90,8 +87,6 @@ private func transcribeAudio(path: String, locale: String) -> Signal<Transcripti
                             request.addsPunctuation = true
                         }
                         request.requiresOnDeviceRecognition = speechRecognizer.supportsOnDeviceRecognition
-                        // Частичные результаты нужны, чтобы собрать текст целиком: распознаватель после паузы начинает
-                        // транскрипцию заново, и итоговый результат содержит только хвост записи
                         request.shouldReportPartialResults = true
                         
                         let accumulator = TranscriptionAccumulator()
@@ -114,7 +109,6 @@ private func transcribeAudio(path: String, locale: String) -> Signal<Transcripti
                             } else {
                                 print("transcribeAudio: locale: \(locale), error: \(String(describing: error))")
 
-                                // Ошибка после частичных результатов: отдаём то, что уже распознано, а не теряем всё
                                 let combined = accumulator.combinedText()
                                 if combined.isEmpty {
                                     subscriber.putNext(nil)

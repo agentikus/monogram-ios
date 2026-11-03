@@ -1,8 +1,6 @@
 import Foundation
 import Postbox
 
-/// Writes deleted/edited/self-destructing content to per-chat folders: first into the app's Documents/Archive
-/// (visible in the Files app) and, when the user picked one, into an external folder as well.
 public final class MonogramArchive {
     public static let shared = MonogramArchive()
 
@@ -136,7 +134,6 @@ public final class MonogramArchive {
         }
     }
 
-    /// Copies a file into the chat folder of every root and returns the path inside the app's own archive.
     func storeFile(sourcePath: String, peerId: Int64, title: String, username: String?, fileName: String, completion: @escaping (String?) -> Void) {
         self.queue.async {
             let (roots, finish) = self.roots()

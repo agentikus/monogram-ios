@@ -80,7 +80,6 @@ public final class MonogramSettings {
     }
     
     private init() {
-        // Любая запись в UserDefaults (в том числе из экранов настроек) сбрасывает кэш: значения перечитаются при следующем обращении.
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: nil) { [weak self] _ in
             guard let self else {
                 return
@@ -134,8 +133,6 @@ public final class MonogramSettings {
         return self.burnedMessages!.contains(self.burnKey(id))
     }
     
-    /// Сохранение одноразового медиа касается только полученных сообщений: свои исходящие должны
-    /// исчезать у отправителя как обычно, иначе таймер зависает на 0 с, а просмотр не отображается.
     func keepsSelfDestructingMedia(_ id: MessageId, incoming: Bool) -> Bool {
         return incoming && self.saveSelfDestructingMedia && !self.isBurned(id)
     }
@@ -385,7 +382,6 @@ public final class MonogramSettings {
         ]
     }
 
-    /// Хранится в Keychain (только на этом устройстве). Старое значение из UserDefaults переносится при первом чтении.
     public var claudeApiKey: String {
         get {
             var query = self.keychainQuery()
@@ -590,8 +586,6 @@ public final class MonogramSettings {
         }
     }
 
-    /// Отправлять ли данные этого вида с данного аккаунта. Режим призрака у каждого аккаунта свой;
-    /// пока для аккаунта ничего не выбрано, действует прежнее общее значение.
     public func sends(_ flag: GhostFlag, accountId: Int64) -> Bool {
         return self.cachedBool("monogram_ghost_\(flag.rawValue)_\(accountId)", self.ghostLegacyValue(flag))
     }
