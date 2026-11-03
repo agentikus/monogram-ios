@@ -10,6 +10,44 @@ private struct TranscriptionResult {
     var isFinal: Bool
 }
 
+/// Склеивает частичные результаты распознавания. После паузы `SFSpeechRecognizer` начинает транскрипцию
+/// заново: первый сегмент нового результата начинается позже первого сегмента предыдущего (его начало
+/// отброшено), и без склейки в итоге остаётся только хвост записи.
+private final class TranscriptionAccumulator {
+    private static let restartThreshold: TimeInterval = 0.75
+
+    private var committed: String = ""
+    private var lastText: String = ""
+    private var lastFirstTimestamp: TimeInterval?
+
+    func update(text: String, firstSegmentTimestamp: TimeInterval?) -> String {
+        if let previous = self.lastFirstTimestamp, let current = firstSegmentTimestamp, current > previous + TranscriptionAccumulator.restartThreshold, !self.lastText.isEmpty {
+            self.committed = TranscriptionAccumulator.join(self.committed, self.lastText)
+        }
+        if !text.isEmpty {
+            self.lastText = text
+            if let firstSegmentTimestamp = firstSegmentTimestamp {
+                self.lastFirstTimestamp = firstSegmentTimestamp
+            }
+        }
+        return self.combinedText()
+    }
+
+    func combinedText() -> String {
+        return TranscriptionAccumulator.join(self.committed, self.lastText)
+    }
+
+    private static func join(_ lhs: String, _ rhs: String) -> String {
+        if lhs.isEmpty {
+            return rhs
+        } else if rhs.isEmpty {
+            return lhs
+        } else {
+            return lhs + " " + rhs
+        }
+    }
+}
+
 private func transcribeAudio(path: String, locale: String) -> Signal<TranscriptionResult?, NoError> {
     return Signal { subscriber in
         let disposable = MetaDisposable()
@@ -52,28 +90,41 @@ private func transcribeAudio(path: String, locale: String) -> Signal<Transcripti
                             request.addsPunctuation = true
                         }
                         request.requiresOnDeviceRecognition = speechRecognizer.supportsOnDeviceRecognition
-                        request.shouldReportPartialResults = false
+                        // Частичные результаты нужны, чтобы собрать текст целиком: распознаватель после паузы начинает
+                        // транскрипцию заново, и итоговый результат содержит только хвост записи
+                        request.shouldReportPartialResults = true
                         
+                        let accumulator = TranscriptionAccumulator()
                         let task = speechRecognizer.recognitionTask(with: request, resultHandler: { result, error in
                             if let result = result {
-                                var confidence: Float = 0.0
-                                for segment in result.bestTranscription.segments {
-                                    confidence += segment.confidence
-                                }
-                                confidence /= Float(result.bestTranscription.segments.count)
-                                subscriber.putNext(TranscriptionResult(text: result.bestTranscription.formattedString, confidence: confidence, isFinal: result.isFinal))
-                                
+                                let transcription = result.bestTranscription
+                                let combined = accumulator.update(text: transcription.formattedString, firstSegmentTimestamp: transcription.segments.first?.timestamp)
+
                                 if result.isFinal {
+                                    var confidence: Float = 0.0
+                                    if !transcription.segments.isEmpty {
+                                        for segment in transcription.segments {
+                                            confidence += segment.confidence
+                                        }
+                                        confidence /= Float(transcription.segments.count)
+                                    }
+                                    subscriber.putNext(TranscriptionResult(text: combined, confidence: confidence, isFinal: true))
                                     subscriber.putCompletion()
                                 }
                             } else {
                                 print("transcribeAudio: locale: \(locale), error: \(String(describing: error))")
-                                
-                                subscriber.putNext(nil)
+
+                                // Ошибка после частичных результатов: отдаём то, что уже распознано, а не теряем всё
+                                let combined = accumulator.combinedText()
+                                if combined.isEmpty {
+                                    subscriber.putNext(nil)
+                                } else {
+                                    subscriber.putNext(TranscriptionResult(text: combined, confidence: 0.0, isFinal: true))
+                                }
                                 subscriber.putCompletion()
                             }
                         })
-                        
+
                         disposable.set(ActionDisposable {
                             task.cancel()
                         })
